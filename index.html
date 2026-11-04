@@ -281,7 +281,6 @@ document.addEventListener('keydown', e=>{
   else if (player && (k==='m'||k==='M')) player.setMute(!player.getMute());
   else if (player && k===' '){ e.preventDefault(); player.pause(); }
 });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden && player) player.pause(); });
 window.addEventListener('beforeunload', ()=>{ if(player) player.remove(); });
 
 renderList();
