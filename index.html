@@ -5,7 +5,7 @@
 <title>ART TV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
-<link rel="icon" type="image/jpeg" href="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg">
+<link rel="icon" type="image/png" href="https://i.postimg.cc/FRbCCR3n/11zon-cropped.png">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 <script src="//ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
@@ -30,6 +30,8 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 }
 #home h1{margin:0; font-size:64px; font-weight:800; letter-spacing:1px; color:var(--gold)}
 #home p{margin:8px 0 0; color:var(--muted); font-size:17px}
+.home-btn{margin-top:22px; padding:11px 24px; border-radius:12px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-weight:700; font-size:15px}
+.home-btn:hover{background:var(--gold); color:#000}
 
 /* شارة القناة (اللوجو) */
 .badge{
@@ -43,7 +45,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 #playerWrap.on{display:block}
 #jwplayerDiv{width:100%; height:100%}
 #banner{
-  position:absolute; top:24px; right:24px; z-index:40; display:flex; align-items:center; gap:14px;
+  position:absolute; top:24px; right:24px; z-index:800; display:flex; align-items:center; gap:14px;
   background:rgba(11,13,18,.82); backdrop-filter:blur(8px); border:1px solid var(--line); border-radius:16px; padding:10px 18px 10px 14px;
   opacity:0; transform:translateY(-8px); transition:.3s; pointer-events:none;
 }
@@ -52,7 +54,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 #banner .t1{font-weight:800; font-size:18px}
 #banner .t2{font-size:12px; color:var(--muted)}
 #banner .live{font-size:11px; font-weight:800; background:#e23b3b; color:#fff; padding:3px 8px; border-radius:6px; margin-inline-start:8px}
-#overlay{position:absolute; inset:0; z-index:35; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.72); text-align:center; padding:20px}
+#overlay{position:absolute; inset:0; z-index:700; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.72); text-align:center; padding:20px}
 #overlay.on{display:flex}
 .spinner{width:44px; height:44px; border-radius:50%; border:4px solid #2a3040; border-top-color:var(--gold); animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -60,22 +62,11 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 #retry{display:none; padding:10px 22px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-weight:700; font-size:15px}
 #retry:hover{background:var(--gold); color:#000}
 
-/* الأيقونة: يمين الشاشة في المنتصف */
-#fab{
-  position:fixed; top:50%; right:0; transform:translateY(-50%); z-index:80;
-  width:64px; height:64px; padding:0; overflow:hidden;
-  border:2px solid var(--gold); border-right:none; border-radius:18px 0 0 18px; background:var(--ink);
-  box-shadow:-6px 4px 22px rgba(0,0,0,.5); transition:opacity .4s, width .15s;
-}
-#fab:hover{width:72px}
-#fab img{width:100%; height:100%; object-fit:cover; display:block}
-#fab.idle{opacity:0}
-
 /* القائمة الوحيدة: في منتصف الشاشة */
-#scrim{position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .25s}
+#scrim{position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .25s}
 #scrim.on{opacity:1; pointer-events:auto}
 #menu{
-  position:fixed; top:50%; left:50%; z-index:60; width:min(960px, calc(100vw - 150px)); max-height:calc(100vh - 60px); overflow:auto;
+  position:fixed; top:50%; left:50%; z-index:1000; width:min(960px, calc(100vw - 150px)); max-height:calc(100vh - 60px); overflow:auto;
   transform:translate(-50%,-46%) scale(.97); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
   background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:22px 24px 16px; box-shadow:0 30px 80px rgba(0,0,0,.6);
 }
@@ -118,7 +109,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 
 <main class="stage">
   <section id="home">
-    <div><h1>ART TV</h1><p>اختر قناة من القائمة، أو افتحها من الأيقونة على يمين الشاشة</p></div>
+    <div><h1>ART TV</h1><p>اختر قناة من القائمة، وأثناء المشاهدة افتحها من أيقونة القنوات في شريط المشغل</p><button id="homeMenuBtn" class="home-btn"><i class="fa-solid fa-table-cells-large"></i> عرض القنوات</button></div>
   </section>
   <section id="playerWrap">
     <div id="jwplayerDiv"></div>
@@ -131,15 +122,11 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   </section>
 </main>
 
-<button id="fab" title="القنوات (Tab)" aria-label="فتح قائمة القنوات" aria-expanded="false">
-  <img src="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg" alt="ART TV">
-</button>
-
 <div id="scrim"></div>
 
 <section id="menu" aria-label="قنوات ART" aria-hidden="true">
   <div class="m-head">
-    <img id="logoHome" src="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg" alt="الرئيسية" title="الشاشة الرئيسية">
+    <img id="logoHome" src="https://i.postimg.cc/FRbCCR3n/11zon-cropped.png" alt="الرئيسية" title="الشاشة الرئيسية">
     <div class="grow"><b>ART TV</b><span>5 قنوات مباشرة</span></div>
     <button class="x-btn" id="closeBtn" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
   </div>
@@ -174,9 +161,9 @@ const CHANNELS = [
 ];
 
 const $ = id => document.getElementById(id);
-const menu=$('menu'), scrim=$('scrim'), fab=$('fab'), listEl=$('channels'), homeEl=$('home'), wrapEl=$('playerWrap');
+const menu=$('menu'), scrim=$('scrim'), listEl=$('channels'), homeEl=$('home'), wrapEl=$('playerWrap');
 const banner=$('banner'), overlay=$('overlay'), overlayMsg=$('overlayMsg'), spinner=$('spinner'), retryBtn=$('retry');
-let player=null, current=-1, bannerTimer=null, loadTimer=null, idleTimer=null;
+let player=null, current=-1, bannerTimer=null, loadTimer=null;
 
 function badgeHTML(ch){
   return `<span class="badge" style="--c:${ch.c}"><i class="fa-solid ${ch.icon}"></i><img src="${ch.logo}" alt="" onerror="this.remove()"></span>`;
@@ -195,21 +182,40 @@ function renderList(){
 function setMenu(open){
   menu.classList.toggle('open', open);
   scrim.classList.toggle('on', open);
-  fab.setAttribute('aria-expanded', open);
   menu.setAttribute('aria-hidden', !open);
-  wakeFab();
 }
 const toggleMenu = () => setMenu(!menu.classList.contains('open'));
-fab.addEventListener('click', toggleMenu);
 $('closeBtn').addEventListener('click', ()=>setMenu(false));
 scrim.addEventListener('click', ()=>setMenu(false));
 
-/* الأيقونة تختفي بعد 3 ثواني من عدم حركة الماوس أثناء المشاهدة */
-function wakeFab(){
-  fab.classList.remove('idle'); clearTimeout(idleTimer);
-  if (player && !menu.classList.contains('open')) idleTimer = setTimeout(()=>fab.classList.add('idle'), 3000);
+/* إيقونة زر القنوات في شريط المشغل (شبكة) */
+const CH_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1.5'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1.5'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1.5'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1.5'/%3E%3C/svg%3E";
+
+/* القائمة والشريط يدخلوا جوه المشغل علشان يظهروا في ملء الشاشة */
+function dock(inPlayer){
+  const host = inPlayer ? $('jwplayerDiv') : null;
+  if (inPlayer && !host) return;
+  [scrim, menu].forEach(el => (host || document.body).appendChild(el));
+  [banner, overlay].forEach(el => (host || wrapEl).appendChild(el));
 }
-document.addEventListener('mousemove', wakeFab);
+
+/* مكان الزر: بين زر الجودة وزر تكبير/تصغير الصورة */
+function placeButtons(){
+  const root = $('jwplayerDiv');
+  const ch = root.querySelector('[button="channels-button"]') || root.querySelector('[aria-label="قائمة القنوات"]');
+  const st = root.querySelector('[button="stretch-button"]') || root.querySelector('[aria-label="توسيع/تضييق الصورة"]');
+  const se = root.querySelector('.jw-icon-settings');
+  if (!ch || !st || !se) return;
+  const stFirst = se.compareDocumentPosition(st) & Node.DOCUMENT_POSITION_PRECEDING;
+  const later = stFirst ? se : st;
+  if (later.previousElementSibling !== ch) later.parentNode.insertBefore(ch, later);
+}
+function addChannelsButton(){
+  player.addButton(CH_ICON, "قائمة القنوات", toggleMenu, "channels-button");
+  [0, 300, 1000, 2500].forEach(t => setTimeout(placeButtons, t));
+  player.on('fullscreen', () => setTimeout(placeButtons, 100));
+  player.on('resize', () => setTimeout(placeButtons, 100));
+}
 
 /* التشغيل */
 function showOverlay(msg,isError){
@@ -228,7 +234,7 @@ function play(i){
   renderList(); setMenu(false);
   homeEl.style.display='none'; wrapEl.classList.add('on');
   flashBanner(ch); showOverlay('جاري تحميل '+ch.name+'...', false);
-  if (player){ try{player.remove()}catch(e){} player=null; }
+  dock(false); if (player){ try{player.remove()}catch(e){} player=null; }
 
   player = jwplayer('jwplayerDiv').setup({
     file: ch.url, width:'100%', height:'100%', autostart:true, stretching:'uniform',
@@ -249,6 +255,8 @@ function play(i){
       player.setConfig({stretching: stretched?'exactfit':'uniform'});
       if(v) v.style.objectFit = stretched?'fill':'contain';
     },"stretch-button");
+    addChannelsButton();
+    dock(true);
   });
   player.on('audioTracks', function(){
     (player.getAudioTracks()||[]).forEach((t,idx)=>{
@@ -256,17 +264,17 @@ function play(i){
       if (l.includes('ara')||l.includes('عرب')) player.setCurrentAudioTrack(idx);
     });
   });
-  wakeFab();
 }
 function goHome(){
-  if (player){ try{player.remove()}catch(e){} player=null; }
+  dock(false); if (player){ try{player.remove()}catch(e){} player=null; }
   clearTimeout(loadTimer); hideOverlay();
   current=-1; renderList(); setMenu(false);
-  wrapEl.classList.remove('on'); banner.classList.remove('show'); homeEl.style.display='flex'; wakeFab();
+  wrapEl.classList.remove('on'); banner.classList.remove('show'); homeEl.style.display='flex';
 }
 
 listEl.addEventListener('click', e=>{ const b=e.target.closest('.ch'); if(b) play(+b.dataset.i); });
 retryBtn.addEventListener('click', ()=>play(current));
+$('homeMenuBtn').addEventListener('click', ()=>setMenu(true));
 $('logoHome').addEventListener('click', goHome);
 
 document.addEventListener('keydown', e=>{
