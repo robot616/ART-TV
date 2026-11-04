@@ -54,13 +54,6 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 #banner .t1{font-weight:800; font-size:18px}
 #banner .t2{font-size:12px; color:var(--muted)}
 #banner .live{font-size:11px; font-weight:800; background:#e23b3b; color:#fff; padding:3px 8px; border-radius:6px; margin-inline-start:8px}
-#overlay{direction:rtl; position:absolute; inset:0; z-index:700; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.72); text-align:center; padding:20px}
-#overlay.on{display:flex}
-.spinner{width:44px; height:44px; border-radius:50%; border:4px solid #2a3040; border-top-color:var(--gold); animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-#overlay .msg{font-size:16px; max-width:420px; line-height:1.7}
-#retry{display:none; padding:10px 22px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-weight:700; font-size:15px}
-#retry:hover{background:var(--gold); color:#000}
 
 /* القائمة الوحيدة: في منتصف الشاشة */
 #scrim{position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .25s}
@@ -114,11 +107,6 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   <section id="playerWrap">
     <div id="jwplayerDiv"></div>
     <div id="banner"></div>
-    <div id="overlay">
-      <div class="spinner" id="spinner"></div>
-      <div class="msg" id="overlayMsg">جاري تحميل القناة...</div>
-      <button id="retry">إعادة المحاولة</button>
-    </div>
   </section>
 </main>
 
@@ -161,8 +149,8 @@ const CHANNELS = [
 
 const $ = id => document.getElementById(id);
 const menu=$('menu'), scrim=$('scrim'), listEl=$('channels'), homeEl=$('home'), wrapEl=$('playerWrap');
-const banner=$('banner'), overlay=$('overlay'), overlayMsg=$('overlayMsg'), spinner=$('spinner'), retryBtn=$('retry');
-let player=null, playerBroken=false, current=-1, bannerTimer=null, loadTimer=null;
+const banner=$('banner');
+let player=null, playerBroken=false, current=-1, bannerTimer=null;
 
 function badgeHTML(ch){
   return `<span class="badge" style="--c:${ch.c}"><i class="fa-solid ${ch.icon}"></i><img src="${ch.logo}" alt="" onerror="this.remove()"></span>`;
@@ -195,7 +183,7 @@ function dock(inPlayer){
   const host = inPlayer ? $('jwplayerDiv') : null;
   if (inPlayer && !host) return;
   [scrim, menu].forEach(el => (host || document.body).appendChild(el));
-  [banner, overlay].forEach(el => (host || wrapEl).appendChild(el));
+  [banner].forEach(el => (host || wrapEl).appendChild(el));
 }
 
 /* مكان الزر: بين زر الجودة وزر تكبير/تصغير الصورة */
@@ -217,11 +205,6 @@ function addChannelsButton(){
 }
 
 /* التشغيل */
-function showOverlay(msg,isError){
-  overlay.classList.add('on'); overlayMsg.textContent=msg;
-  spinner.style.display = isError?'none':'block'; retryBtn.style.display = isError?'inline-block':'none';
-}
-function hideOverlay(){ overlay.classList.remove('on'); clearTimeout(loadTimer); }
 function flashBanner(ch){
   banner.innerHTML = `${badgeHTML(ch)}<div class="t1">${ch.name}</div>`;
   banner.classList.add('show'); clearTimeout(bannerTimer);
@@ -232,10 +215,8 @@ function play(i){
   const ch = CHANNELS[i]; current = i;
   renderList(); setMenu(false);
   homeEl.style.display='none'; wrapEl.classList.add('on');
-  flashBanner(ch); showOverlay('جاري تحميل '+ch.name+'...', false);
+  flashBanner(ch);
 
-  clearTimeout(loadTimer);
-  loadTimer = setTimeout(()=>showOverlay('القناة تأخرت في التحميل. تأكد من الاتصال أو جرّب مرة ثانية.', true), 20000);
 
   const item = { file: ch.url, drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } } };
 
@@ -255,9 +236,7 @@ function play(i){
     width:'100%', height:'100%', autostart:true, stretching:'uniform'
   }, item));
 
-  player.on('firstFrame', hideOverlay);
-  player.on('play', hideOverlay);
-  const fail = ()=>showOverlay('تعذّر تشغيل '+CHANNELS[current].name+'. قد تكون القناة متوقفة مؤقتًا.', true);
+  const fail = ()=>setMenu(true); /* لو القناة فشلت: القائمة تظهر تاني */
   player.on('setupError', ()=>{ playerBroken = true; fail(); });
   player.on('error', fail);
 
@@ -281,13 +260,11 @@ function play(i){
 }
 function goHome(){
   dock(false); if (player){ try{player.remove()}catch(e){} player=null; }
-  clearTimeout(loadTimer); hideOverlay();
-  current=-1; renderList(); setMenu(false);
+    current=-1; renderList(); setMenu(false);
   wrapEl.classList.remove('on'); banner.classList.remove('show'); homeEl.style.display='flex';
 }
 
 listEl.addEventListener('click', e=>{ const b=e.target.closest('.ch'); if(b) play(+b.dataset.i); });
-retryBtn.addEventListener('click', ()=>play(current));
 $('logoHome').addEventListener('click', goHome);
 $('homeMenuBtn').addEventListener('click', ()=>setMenu(true));
 
