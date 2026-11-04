@@ -5,7 +5,7 @@
 <title>ART TV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
-<link rel="icon" type="image/png" href="https://i.postimg.cc/rmYQzPXk/56cp-removebg-preview.png">
+<link rel="icon" type="image/png" href="https://i.postimg.cc/gcs6yZnL/56cp-Ultra-Pic.png">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 <script src="//ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
@@ -71,7 +71,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:22px 24px 16px; box-shadow:0 30px 80px rgba(0,0,0,.6);
 }
 #menu.open{opacity:1; transform:translate(-50%,-50%); pointer-events:auto}
-.m-head{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+.m-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
 .m-head img{width:46px; height:46px; border-radius:12px; object-fit:contain; background:var(--ink); border:1px solid var(--gold); cursor:pointer}
 .m-head b{display:block; font-size:20px; font-weight:800}
 .m-head span{font-size:12px; color:var(--muted)}
@@ -85,12 +85,12 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   background:var(--panel-2); border:1px solid var(--line); border-radius:18px; transition:transform .15s, border-color .15s;
 }
 .ch:hover{transform:translateY(-4px); border-color:#3a4256}
-.ch.active{border-color:var(--gold)}
+.ch.active{border-color:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18)}
 .ch .badge{width:100%; height:78px; border-radius:13px; font-size:30px}
 .ch-name{font-weight:700; font-size:15px}
 .ch-sub{font-size:12px; color:var(--muted); margin-top:-8px}
 .ch-key{position:absolute; top:10px; left:10px; z-index:2; font:700 11px/1 'Tajawal',sans-serif; color:var(--muted); background:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 7px; direction:ltr}
-.ch.active .ch-key{color:var(--gold); border-color:#5b4a22}
+.ch.active .ch-key{color:#22c55e; border-color:#1d6b3b}
 .live-dot{display:none; width:8px; height:8px; border-radius:50%; background:#ff4d4d; margin-inline-start:6px; animation:pulse 1.6s infinite}
 .ch.active .live-dot{display:inline-block}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,77,.6)}70%{box-shadow:0 0 0 7px rgba(255,77,77,0)}100%{box-shadow:0 0 0 0 rgba(255,77,77,0)}}
@@ -126,8 +126,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 
 <section id="menu" aria-label="قنوات ART" aria-hidden="true">
   <div class="m-head">
-    <img id="logoHome" src="https://i.postimg.cc/rmYQzPXk/56cp-removebg-preview.png" alt="الرئيسية" title="الشاشة الرئيسية">
-    <div class="grow"><b>ART TV</b><span>5 قنوات</span></div>
+    <img id="logoHome" src="https://i.postimg.cc/gcs6yZnL/56cp-Ultra-Pic.png" alt="الرئيسية" title="الشاشة الرئيسية">
     <button class="x-btn" id="closeBtn" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="grid" id="channels"></div>
@@ -163,7 +162,7 @@ const CHANNELS = [
 const $ = id => document.getElementById(id);
 const menu=$('menu'), scrim=$('scrim'), listEl=$('channels'), homeEl=$('home'), wrapEl=$('playerWrap');
 const banner=$('banner'), overlay=$('overlay'), overlayMsg=$('overlayMsg'), spinner=$('spinner'), retryBtn=$('retry');
-let player=null, current=-1, bannerTimer=null, loadTimer=null;
+let player=null, playerBroken=false, current=-1, bannerTimer=null, loadTimer=null;
 
 function badgeHTML(ch){
   return `<span class="badge" style="--c:${ch.c}"><i class="fa-solid ${ch.icon}"></i><img src="${ch.logo}" alt="" onerror="this.remove()"></span>`;
@@ -234,18 +233,33 @@ function play(i){
   renderList(); setMenu(false);
   homeEl.style.display='none'; wrapEl.classList.add('on');
   flashBanner(ch); showOverlay('جاري تحميل '+ch.name+'...', false);
-  dock(false); if (player){ try{player.remove()}catch(e){} player=null; }
 
-  player = jwplayer('jwplayerDiv').setup({
-    file: ch.url, width:'100%', height:'100%', autostart:true, stretching:'uniform',
-    drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } }
-  });
   clearTimeout(loadTimer);
   loadTimer = setTimeout(()=>showOverlay('القناة تأخرت في التحميل. تأكد من الاتصال أو جرّب مرة ثانية.', true), 20000);
+
+  const item = { file: ch.url, drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } } };
+
+  /* المشغل شغال: نبدّل القناة جواه (ملء الشاشة والقائمة يفضلوا زي ما هم) */
+  if (player && !playerBroken){
+    player.load([item]);
+    player.play(true);
+    return;
+  }
+
+  /* أول تشغيل أو بعد خطأ في التحميل: ننشئ مشغل جديد */
+  playerBroken = false;
+  dock(false);
+  if (player){ try{player.remove()}catch(e){} player=null; }
+
+  player = jwplayer('jwplayerDiv').setup(Object.assign({
+    width:'100%', height:'100%', autostart:true, stretching:'uniform'
+  }, item));
+
   player.on('firstFrame', hideOverlay);
   player.on('play', hideOverlay);
-  const fail = ()=>showOverlay('تعذّر تشغيل '+ch.name+'. قد تكون القناة متوقفة مؤقتًا.', true);
-  player.on('setupError', fail); player.on('error', fail);
+  const fail = ()=>showOverlay('تعذّر تشغيل '+CHANNELS[current].name+'. قد تكون القناة متوقفة مؤقتًا.', true);
+  player.on('setupError', ()=>{ playerBroken = true; fail(); });
+  player.on('error', fail);
 
   player.on('ready', function(){
     let stretched=false;
@@ -274,8 +288,8 @@ function goHome(){
 
 listEl.addEventListener('click', e=>{ const b=e.target.closest('.ch'); if(b) play(+b.dataset.i); });
 retryBtn.addEventListener('click', ()=>play(current));
-$('homeMenuBtn').addEventListener('click', ()=>setMenu(true));
 $('logoHome').addEventListener('click', goHome);
+$('homeMenuBtn').addEventListener('click', ()=>setMenu(true));
 
 document.addEventListener('keydown', e=>{
   if (e.ctrlKey||e.metaKey||e.altKey) return;
