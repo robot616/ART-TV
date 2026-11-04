@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>ART TV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/jpeg" href="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+<script src="//ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
+<script>jwplayer.key = "XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap">
+
+<style>
+:root{--ink:#0b0d12; --panel:#12151c; --panel-2:#181c25; --line:#232834; --text:#e9ecf2; --muted:#8a92a3; --gold:#f2c35b}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink); color:var(--text); overflow:hidden; font-family:'Tajawal','Segoe UI',Tahoma,Arial,sans-serif}
+button{font-family:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.stage{position:fixed; inset:0; background:#000}
+
+/* الشاشة الرئيسية */
+#home{
+  position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; text-align:center;
+  background:radial-gradient(900px 500px at 70% 10%, rgba(242,195,91,.10), transparent 60%),
+             radial-gradient(700px 500px at 20% 90%, rgba(201,60,90,.10), transparent 60%), var(--ink);
+}
+#home h1{margin:0; font-size:64px; font-weight:800; letter-spacing:1px; color:var(--gold)}
+#home p{margin:8px 0 0; color:var(--muted); font-size:17px}
+
+/* شارة القناة (اللوجو) */
+.badge{
+  width:84px; height:50px; flex:0 0 auto; border-radius:11px; position:relative; overflow:hidden;
+  display:grid; place-items:center; color:#fff; font-size:20px; background:var(--ink); border:1px solid var(--c,#2a3040);
+}
+.badge img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:6px; background:var(--ink)}
+
+/* المشغل */
+#playerWrap{position:absolute; inset:0; z-index:20; display:none; background:#000}
+#playerWrap.on{display:block}
+#jwplayerDiv{width:100%; height:100%}
+#banner{
+  position:absolute; top:24px; right:24px; z-index:40; display:flex; align-items:center; gap:14px;
+  background:rgba(11,13,18,.82); backdrop-filter:blur(8px); border:1px solid var(--line); border-radius:16px; padding:10px 18px 10px 14px;
+  opacity:0; transform:translateY(-8px); transition:.3s; pointer-events:none;
+}
+#banner.show{opacity:1; transform:none}
+#banner .badge{width:76px; height:44px}
+#banner .t1{font-weight:800; font-size:18px}
+#banner .t2{font-size:12px; color:var(--muted)}
+#banner .live{font-size:11px; font-weight:800; background:#e23b3b; color:#fff; padding:3px 8px; border-radius:6px; margin-inline-start:8px}
+#overlay{position:absolute; inset:0; z-index:35; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.72); text-align:center; padding:20px}
+#overlay.on{display:flex}
+.spinner{width:44px; height:44px; border-radius:50%; border:4px solid #2a3040; border-top-color:var(--gold); animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#overlay .msg{font-size:16px; max-width:420px; line-height:1.7}
+#retry{display:none; padding:10px 22px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold); font-weight:700; font-size:15px}
+#retry:hover{background:var(--gold); color:#000}
+
+/* الأيقونة: يمين الشاشة في المنتصف */
+#fab{
+  position:fixed; top:50%; right:0; transform:translateY(-50%); z-index:80;
+  width:64px; height:64px; padding:0; overflow:hidden;
+  border:2px solid var(--gold); border-right:none; border-radius:18px 0 0 18px; background:var(--ink);
+  box-shadow:-6px 4px 22px rgba(0,0,0,.5); transition:opacity .4s, width .15s;
+}
+#fab:hover{width:72px}
+#fab img{width:100%; height:100%; object-fit:cover; display:block}
+#fab.idle{opacity:0}
+
+/* القائمة الوحيدة: في منتصف الشاشة */
+#scrim{position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .25s}
+#scrim.on{opacity:1; pointer-events:auto}
+#menu{
+  position:fixed; top:50%; left:50%; z-index:60; width:min(960px, calc(100vw - 150px)); max-height:calc(100vh - 60px); overflow:auto;
+  transform:translate(-50%,-46%) scale(.97); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:22px 24px 16px; box-shadow:0 30px 80px rgba(0,0,0,.6);
+}
+#menu.open{opacity:1; transform:translate(-50%,-50%); pointer-events:auto}
+.m-head{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+.m-head img{width:46px; height:46px; border-radius:12px; object-fit:cover; border:1px solid var(--gold); cursor:pointer}
+.m-head b{display:block; font-size:20px; font-weight:800}
+.m-head span{font-size:12px; color:var(--muted)}
+.m-head .grow{flex:1}
+.x-btn{width:36px; height:36px; border-radius:10px; background:transparent; border:1px solid var(--line); color:var(--muted)}
+.x-btn:hover{color:var(--text); background:var(--panel-2)}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px}
+.ch{
+  position:relative; display:flex; flex-direction:column; align-items:center; gap:12px; padding:18px 12px 14px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:18px; transition:transform .15s, border-color .15s;
+}
+.ch:hover{transform:translateY(-4px); border-color:#3a4256}
+.ch.active{border-color:var(--gold)}
+.ch .badge{width:100%; height:78px; border-radius:13px; font-size:30px}
+.ch-name{font-weight:700; font-size:15px}
+.ch-sub{font-size:12px; color:var(--muted); margin-top:-8px}
+.ch-key{position:absolute; top:10px; left:10px; z-index:2; font:700 11px/1 'Tajawal',sans-serif; color:var(--muted); background:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 7px; direction:ltr}
+.ch.active .ch-key{color:var(--gold); border-color:#5b4a22}
+.live-dot{display:none; width:8px; height:8px; border-radius:50%; background:#ff4d4d; margin-inline-start:6px; animation:pulse 1.6s infinite}
+.ch.active .live-dot{display:inline-block}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,77,.6)}70%{box-shadow:0 0 0 7px rgba(255,77,77,0)}100%{box-shadow:0 0 0 0 rgba(255,77,77,0)}}
+.m-foot{margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); line-height:2; text-align:center}
+.m-foot kbd{font:700 11px 'Tajawal',sans-serif; background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--text); direction:ltr; display:inline-block}
+
+/* JW Player */
+.jw-icon-playlist,.jw-icon-next,.jw-related-btn{display:none!important}
+.jw-icon-fullscreen svg{display:none!important}
+.jw-icon-fullscreen{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'/%3E%3C/svg%3E") center/16px no-repeat}
+.jw-flag-fullscreen .jw-icon-fullscreen{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3'/%3E%3C/svg%3E") center/16px no-repeat}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+
+<main class="stage">
+  <section id="home">
+    <div><h1>ART TV</h1><p>اختر قناة من القائمة، أو افتحها من الأيقونة على يمين الشاشة</p></div>
+  </section>
+  <section id="playerWrap">
+    <div id="jwplayerDiv"></div>
+    <div id="banner"></div>
+    <div id="overlay">
+      <div class="spinner" id="spinner"></div>
+      <div class="msg" id="overlayMsg">جاري تحميل القناة...</div>
+      <button id="retry">إعادة المحاولة</button>
+    </div>
+  </section>
+</main>
+
+<button id="fab" title="القنوات (Tab)" aria-label="فتح قائمة القنوات" aria-expanded="false">
+  <img src="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg" alt="ART TV">
+</button>
+
+<div id="scrim"></div>
+
+<section id="menu" aria-label="قنوات ART" aria-hidden="true">
+  <div class="m-head">
+    <img id="logoHome" src="https://i.postimg.cc/MG2cZKfC/11zon-cropped.jpg" alt="الرئيسية" title="الشاشة الرئيسية">
+    <div class="grow"><b>ART TV</b><span>5 قنوات مباشرة</span></div>
+    <button class="x-btn" id="closeBtn" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="grid" id="channels"></div>
+  <div class="m-foot">
+    <kbd>1</kbd>–<kbd>5</kbd> تبديل القناة &nbsp; <kbd>↑</kbd> <kbd>↓</kbd> السابقة / التالية &nbsp; <kbd>F</kbd> ملء الشاشة &nbsp; <kbd>M</kbd> كتم &nbsp; <kbd>H</kbd> الرئيسية &nbsp; <kbd>Tab</kbd> القائمة
+  </div>
+</section>
+
+<script>
+const CHANNELS = [
+  { num:1, name:"ART حكايات 1", sub:"مسلسلات ودراما", icon:"fa-book-open", c:"#e0457b",
+    logo:"https://www.artonline.tv/images/ART_Logo/art_hekayat.png",
+    url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Hekayat/DASH/ART_Hekayat.mpd",
+    k1:"3d614bb04140eda383d117fb55e9a361", k2:"b669cdf2cb65eff56d1e3534c7a54b53" },
+  { num:2, name:"ART حكايات 2", sub:"مسلسلات ودراما", icon:"fa-feather-pointed", c:"#9b5de5",
+    logo:"https://www.artonline.tv/images/ART_Logo/art_hekayat_2.png",
+    url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Hekayat_2/DASH/ART_Hekayat_2.mpd",
+    k1:"4ccb01903d6868e27953ff0298d4ac05", k2:"d156518d6ab453d9f9d12c243280be8f" },
+  { num:3, name:"ART أفلام 1", sub:"أفلام عربية", icon:"fa-film", c:"#f59e0b",
+    logo:"https://www.artonline.tv/images/ART_Logo/ART_AFLAM_1w.png",
+    url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Aflam/DASH/ART_Aflam.mpd",
+    k1:"264e7cb9dfd6b9e5c281c97db4c2b4fa", k2:"47425a7e8f7e4030d186559852ae97db" },
+  { num:4, name:"ART أفلام 2", sub:"أفلام عربية", icon:"fa-clapperboard", c:"#14b8a6",
+    logo:"https://www.artonline.tv/images/ART_Logo/ART_AFLAM_2w.png",
+    url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Aflam_2/DASH/ART_Aflam_2.mpd",
+    k1:"809a386e57689d56c01a5c3190889641", k2:"d54639bb7d418d515e5198663a6d7ae5" },
+  { num:5, name:"ART سينما", sub:"سينما وأفلام", icon:"fa-ticket", c:"#3b82f6",
+    logo:"https://www.artonline.tv/images/ART_Logo/cinema-logo.png",
+    url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Cinema/DASH/ART_Cinema.mpd",
+    k1:"bd484fc91dcf152010a0e367e15ab60e", k2:"d9bed0a77b7da410129820bcc6606670" }
+];
+
+const $ = id => document.getElementById(id);
+const menu=$('menu'), scrim=$('scrim'), fab=$('fab'), listEl=$('channels'), homeEl=$('home'), wrapEl=$('playerWrap');
+const banner=$('banner'), overlay=$('overlay'), overlayMsg=$('overlayMsg'), spinner=$('spinner'), retryBtn=$('retry');
+let player=null, current=-1, bannerTimer=null, loadTimer=null, idleTimer=null;
+
+function badgeHTML(ch){
+  return `<span class="badge" style="--c:${ch.c}"><i class="fa-solid ${ch.icon}"></i><img src="${ch.logo}" alt="" onerror="this.remove()"></span>`;
+}
+function renderList(){
+  listEl.innerHTML = CHANNELS.map((ch,i)=>`
+    <button class="ch ${i===current?'active':''}" data-i="${i}">
+      <span class="ch-key">${ch.num}</span>
+      ${badgeHTML(ch)}
+      <span class="ch-name">${ch.name}<span class="live-dot"></span></span>
+      <span class="ch-sub">${ch.sub}</span>
+    </button>`).join('');
+}
+
+/* القائمة (تفتح وتقفل بالأيقونة) */
+function setMenu(open){
+  menu.classList.toggle('open', open);
+  scrim.classList.toggle('on', open);
+  fab.setAttribute('aria-expanded', open);
+  menu.setAttribute('aria-hidden', !open);
+  wakeFab();
+}
+const toggleMenu = () => setMenu(!menu.classList.contains('open'));
+fab.addEventListener('click', toggleMenu);
+$('closeBtn').addEventListener('click', ()=>setMenu(false));
+scrim.addEventListener('click', ()=>setMenu(false));
+
+/* الأيقونة تختفي بعد 3 ثواني من عدم حركة الماوس أثناء المشاهدة */
+function wakeFab(){
+  fab.classList.remove('idle'); clearTimeout(idleTimer);
+  if (player && !menu.classList.contains('open')) idleTimer = setTimeout(()=>fab.classList.add('idle'), 3000);
+}
+document.addEventListener('mousemove', wakeFab);
+
+/* التشغيل */
+function showOverlay(msg,isError){
+  overlay.classList.add('on'); overlayMsg.textContent=msg;
+  spinner.style.display = isError?'none':'block'; retryBtn.style.display = isError?'inline-block':'none';
+}
+function hideOverlay(){ overlay.classList.remove('on'); clearTimeout(loadTimer); }
+function flashBanner(ch){
+  banner.innerHTML = `${badgeHTML(ch)}<div><div class="t1">${ch.name}<span class="live">مباشر</span></div><div class="t2">القناة ${ch.num} من ${CHANNELS.length}</div></div>`;
+  banner.classList.add('show'); clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(()=>banner.classList.remove('show'), 3500);
+}
+function play(i){
+  if (i<0 || i>=CHANNELS.length) return;
+  const ch = CHANNELS[i]; current = i;
+  renderList(); setMenu(false);
+  homeEl.style.display='none'; wrapEl.classList.add('on');
+  flashBanner(ch); showOverlay('جاري تحميل '+ch.name+'...', false);
+  if (player){ try{player.remove()}catch(e){} player=null; }
+
+  player = jwplayer('jwplayerDiv').setup({
+    file: ch.url, width:'100%', height:'100%', autostart:true, stretching:'uniform',
+    drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } }
+  });
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(()=>showOverlay('القناة تأخرت في التحميل. تأكد من الاتصال أو جرّب مرة ثانية.', true), 20000);
+  player.on('firstFrame', hideOverlay);
+  player.on('play', hideOverlay);
+  const fail = ()=>showOverlay('تعذّر تشغيل '+ch.name+'. قد تكون القناة متوقفة مؤقتًا.', true);
+  player.on('setupError', fail); player.on('error', fail);
+
+  player.on('ready', function(){
+    let stretched=false;
+    const icon="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTQgMTBsNy03bS02IDBoNnY2bS0xMSA1bC03IDdtNiAwSDN2LTYiLz48L3N2Zz4=";
+    player.addButton(icon,"توسيع/تضييق الصورة",function(){
+      const v=document.querySelector('#jwplayerDiv .jw-video'); stretched=!stretched;
+      player.setConfig({stretching: stretched?'exactfit':'uniform'});
+      if(v) v.style.objectFit = stretched?'fill':'contain';
+    },"stretch-button");
+  });
+  player.on('audioTracks', function(){
+    (player.getAudioTracks()||[]).forEach((t,idx)=>{
+      const l=(t.label||'').toLowerCase();
+      if (l.includes('ara')||l.includes('عرب')) player.setCurrentAudioTrack(idx);
+    });
+  });
+  wakeFab();
+}
+function goHome(){
+  if (player){ try{player.remove()}catch(e){} player=null; }
+  clearTimeout(loadTimer); hideOverlay();
+  current=-1; renderList(); setMenu(false);
+  wrapEl.classList.remove('on'); banner.classList.remove('show'); homeEl.style.display='flex'; wakeFab();
+}
+
+listEl.addEventListener('click', e=>{ const b=e.target.closest('.ch'); if(b) play(+b.dataset.i); });
+retryBtn.addEventListener('click', ()=>play(current));
+$('logoHome').addEventListener('click', goHome);
+
+document.addEventListener('keydown', e=>{
+  if (e.ctrlKey||e.metaKey||e.altKey) return;
+  const k=e.key, n=CHANNELS.length;
+  if (k>='1' && k<=String(n)) play(+k-1);
+  else if (k==='ArrowDown'||k==='PageDown'){ e.preventDefault(); play(current<0?0:(current+1)%n); }
+  else if (k==='ArrowUp'||k==='PageUp'){ e.preventDefault(); play(current<0?n-1:(current-1+n)%n); }
+  else if (k==='Escape') setMenu(false);
+  else if (k==='Tab'){ e.preventDefault(); toggleMenu(); }
+  else if (k==='h'||k==='H') goHome();
+  else if (player && (k==='f'||k==='F')) player.setFullscreen(!player.getFullscreen());
+  else if (player && (k==='m'||k==='M')) player.setMute(!player.getMute());
+  else if (player && k===' '){ e.preventDefault(); player.pause(); }
+});
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && player) player.pause(); });
+window.addEventListener('beforeunload', ()=>{ if(player) player.remove(); });
+
+renderList();
+setMenu(true); /* القائمة مفتوحة عند بداية الصفحة */
+</script>
+</body>
+</html>
