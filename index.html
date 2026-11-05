@@ -33,13 +33,16 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 /* الشاشة الرئيسية: صورة + مربع زجاجي */
 #home{
   position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; padding:30px;
-  background:#0b0d12 url("https://i.postimg.cc/hvShKf9x/690n.png") center/cover no-repeat;
+  background:#0b0d12; overflow:hidden;
 }
-#home::before{content:""; position:absolute; inset:0; background:rgba(5,8,14,.38)}
-#homeBox{position:relative; width:min(1040px, 94vw); border-radius:26px; padding:22px 22px 16px}
-.home-foot{display:flex; justify-content:center; margin-top:16px}
-.home-btn{display:inline-flex; align-items:center; gap:8px; padding:9px 20px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:var(--text); font-weight:700; font-size:14px}
-.home-btn:hover{background:rgba(255,255,255,.16)}
+/* طبقة مغبّشة من نفس الصورة تملأ الفراغ، وفوقها الصورة كاملة بنسبتها الأصلية */
+.bg-blur{position:absolute; inset:-40px; background:url("https://i.postimg.cc/hvShKf9x/690n.png") center/cover no-repeat; filter:blur(30px) brightness(.65)}
+.bg-main{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; display:block}
+#home::after{content:""; position:absolute; inset:0; background:rgba(5,8,14,.22); pointer-events:none}
+#homeBox{position:relative; z-index:2; width:min(1040px, 94vw); border-radius:26px; padding:22px 22px 16px}
+.hd-left{display:flex; align-items:center; gap:12px}
+.hd-btn{display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:var(--text); font-weight:700; font-size:14px}
+.hd-btn:hover{background:rgba(255,255,255,.18)}
 
 /* شارة القناة (اللوجو) */
 .badge{width:84px; height:50px; flex:0 0 auto; border-radius:11px; position:relative; overflow:hidden; display:grid; place-items:center; color:#fff; font-size:20px; background:var(--ink); border:1px solid var(--c,#2a3040)}
@@ -109,8 +112,15 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 .day-tab.on{border-color:var(--green); color:var(--green); background:rgba(34,197,94,.12)}
 #eStatus{font-size:12px; color:var(--muted); white-space:nowrap}
 #eScroll{flex:1; overflow:auto; direction:ltr; position:relative; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.28)}
-#eScroll::-webkit-scrollbar{height:8px; width:8px}
-#eScroll::-webkit-scrollbar-thumb{background:#3a4256; border-radius:6px}
+#eScroll{scrollbar-width:none; -ms-overflow-style:none}
+#eScroll::-webkit-scrollbar{display:none}
+.e-nav{display:flex; direction:ltr; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px}
+.nav-btn{display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 16px; border-radius:11px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08); color:var(--text); font-weight:700; font-size:13.5px; direction:rtl}
+.nav-btn:hover:not(:disabled){background:rgba(255,255,255,.18)}
+.nav-btn:disabled{opacity:.35; cursor:default}
+.e-mid{display:flex; align-items:center; gap:12px; direction:rtl}
+#eRange{font-size:13px; color:var(--muted); direction:rtl}
+.e-note{position:absolute; top:90px; left:0; right:0; text-align:center; font-size:14px; color:var(--muted); direction:rtl; padding:0 30px; pointer-events:none}
 .e-inner{position:relative}
 .e-hours{position:sticky; top:0; height:36px; z-index:4; background:rgba(14,17,24,.94); border-bottom:1px solid rgba(255,255,255,.1)}
 .e-corner{position:sticky; left:0; z-index:6; height:36px; background:rgba(14,17,24,.98); border-right:1px solid rgba(255,255,255,.1)}
@@ -142,11 +152,16 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 
 <main class="stage">
   <section id="home">
+    <div class="bg-blur"></div>
+    <img class="bg-main" src="https://i.postimg.cc/hvShKf9x/690n.png" alt="">
     <div id="homeBox" class="glass">
-      <div class="grid" id="homeGrid"></div>
-      <div class="home-foot">
-        <button class="home-btn" id="homeEpgBtn"><i class="fa-solid fa-calendar-days"></i> جدول البرامج</button>
+      <div class="m-head">
+        <div class="hd-left">
+          <img id="logoHome2" src="https://i.postimg.cc/gcs6yZnL/56cp-Ultra-Pic.png" alt="الرئيسية" title="الشاشة الرئيسية">
+          <button class="hd-btn" id="homeEpgBtn"><i class="fa-solid fa-calendar-days"></i> جدول البرامج</button>
+        </div>
       </div>
+      <div class="grid" id="homeGrid"></div>
     </div>
   </section>
   <section id="playerWrap">
@@ -159,7 +174,10 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 
 <section id="menu" class="glass" aria-label="قنوات ART" aria-hidden="true">
   <div class="m-head">
-    <img id="logoHome" src="https://i.postimg.cc/gcs6yZnL/56cp-Ultra-Pic.png" alt="الرئيسية" title="الشاشة الرئيسية">
+    <div class="hd-left">
+      <img id="logoHome" src="https://i.postimg.cc/gcs6yZnL/56cp-Ultra-Pic.png" alt="الرئيسية" title="الشاشة الرئيسية">
+      <button class="hd-btn" id="menuEpgBtn"><i class="fa-solid fa-calendar-days"></i> جدول البرامج</button>
+    </div>
     <button class="x-btn" id="closeBtn" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="grid" id="channels"></div>
@@ -170,6 +188,11 @@ button{font-family:inherit; color:inherit; cursor:pointer}
     <div class="e-days" id="eDays"></div>
     <span id="eStatus"></span>
     <button class="x-btn" id="epgClose" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="e-nav">
+    <button class="nav-btn" id="eLeft" aria-label="ساعات سابقة"><i class="fa-solid fa-chevron-left"></i> ساعات سابقة</button>
+    <div class="e-mid"><button class="nav-btn" id="eNow">الآن</button><span id="eRange"></span></div>
+    <button class="nav-btn" id="eRight" aria-label="ساعات لاحقة">ساعات لاحقة <i class="fa-solid fa-chevron-right"></i></button>
   </div>
   <div id="eScroll"></div>
 </section>
@@ -201,10 +224,9 @@ const CHANNELS = [
 
 const $ = id => document.getElementById(id);
 const menu=$('menu'), epg=$('epg'), scrim=$('scrim'), listEl=$('channels'), homeGrid=$('homeGrid'), homeEl=$('home'), wrapEl=$('playerWrap'), banner=$('banner');
-let player=null, playerBroken=false, current=-1, bannerTimer=null, epgOpen=false, epgDay=0;
+let epgDayStart=0, player=null, playerBroken=false, current=-1, bannerTimer=null, epgOpen=false, epgDay=0;
 
 const CH_ICON  = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzIuMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cmVjdCB4PSczJyB5PSczJyB3aWR0aD0nNycgaGVpZ2h0PSc3JyByeD0nMS41Jy8+PHJlY3QgeD0nMTQnIHk9JzMnIHdpZHRoPSc3JyBoZWlnaHQ9JzcnIHJ4PScxLjUnLz48cmVjdCB4PSczJyB5PScxNCcgd2lkdGg9JzcnIGhlaWdodD0nNycgcng9JzEuNScvPjxyZWN0IHg9JzE0JyB5PScxNCcgd2lkdGg9JzcnIGhlaWdodD0nNycgcng9JzEuNScvPjwvc3ZnPg==";
-const EPG_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzIuMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cmVjdCB4PSczJyB5PSc0LjUnIHdpZHRoPScxOCcgaGVpZ2h0PScxNicgcng9JzIuNScvPjxwYXRoIGQ9J00zIDkuNWgxOE04IDIuNXY0TTE2IDIuNXY0TTcuNSAxNGgzTTEzLjUgMTRoM003LjUgMTcuNWgzJy8+PC9zdmc+";
 const STRETCH_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTQgMTBsNy03bS02IDBoNnY2bS0xMSA1bC03IDdtNiAwSDN2LTYiLz48L3N2Zz4=";
 
 /* =============== أدوات =============== */
@@ -241,7 +263,7 @@ function renderList(){
 const EPG_BASE = "https://www.artonline.tv";
 let EPG = {};          /* { 'YYYY-MM-DD': { رقم_القناة: [[دقائق_من_منتصف_الليل_GMT, عنوان], ...] } } */
 let TL  = {};          /* الجدول الموحد لكل قناة: [{s, e, title}] */
-let epgStatus = '';
+let epgStatus = '', epgErr = '';
 let lastLoadKey = '';
 
 function utcDay(offset){ const n=new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()+offset)); }
@@ -254,11 +276,11 @@ function fetchT(url, opt){
 }
 async function httpGet(url){
   if (window.artEpg && window.artEpg.get) return window.artEpg.get(url);
-  const r = await fetchT(url, {}); return r.text();
+  const r = await fetchT(url, {}); if (!r.ok) throw new Error('HTTP '+r.status); return r.text();
 }
 async function httpPost(url, body){
   if (window.artEpg && window.artEpg.post) return window.artEpg.post(url, body);
-  const r = await fetchT(url, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body}); return r.text();
+  const r = await fetchT(url, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body}); if (!r.ok) throw new Error('HTTP '+r.status); return r.text();
 }
 
 async function getServerDays(){
@@ -286,7 +308,7 @@ async function loadEpg(){
   epgStatus = 'loading'; showStatus();
   lastLoadKey = keyOfDate(utcDay(0));
   const days = await getServerDays();
-  let ok = 0, fail = 0;
+  let ok = 0, fail = 0, got = 0; epgErr = '';
   for (const day of days){
     const key = day.yyyy+'-'+day.mm+'-'+day.dd, text = day.mm+'/'+day.dd+'/'+day.yyyy;
     await Promise.all(CHANNELS.map(async ch=>{
@@ -294,13 +316,14 @@ async function loadEpg(){
       try{
         let items = parseDay(await ask(text));
         if (!items.length) items = parseDay(await ask(' ' + text));
-        (EPG[key] = EPG[key] || {})[ch.num] = items; ok++;
-      }catch(e){ fail++; }
+        (EPG[key] = EPG[key] || {})[ch.num] = items; ok++; if (items.length) got++;
+      }catch(e){ fail++; if (!epgErr) epgErr = (e && e.message) ? e.message : String(e); console.warn('EPG:', ch.epg, e); }
     }));
     rebuild();
   }
   prune(); lsSet('art_epg_v1', JSON.stringify(EPG));
-  epgStatus = ok ? '' : 'error'; showStatus();
+  epgStatus = !ok ? 'error' : (!got ? 'empty' : ''); showStatus();
+  if (epgOpen) renderEpg(true);
 }
 function prune(){
   const min = keyOfDate(utcDay(-1));
@@ -356,7 +379,9 @@ function updateNowNext(){
 const LW = 150, PPM = 200/60;
 function showStatus(){
   const el = $('eStatus');
-  el.textContent = epgStatus==='loading' ? 'جاري تحديث الجدول...' : epgStatus==='error' ? 'تعذّر تحديث الجدول' : '';
+  el.textContent = epgStatus==='loading' ? 'جاري تحديث الجدول...'
+    : epgStatus==='error' ? 'تعذّر تحميل الجدول' + (epgErr ? ' (' + epgErr + ')' : '')
+    : epgStatus==='empty' ? 'الموقع رد بدون برامج' : '';
 }
 function renderEpg(keep){
   const sc = $('eScroll'); const prev = keep ? sc.scrollLeft : null;
@@ -372,6 +397,7 @@ function renderEpg(keep){
 
   const dayStart = new Date(n.getFullYear(), n.getMonth(), n.getDate()+epgDay).getTime();
   const dayEnd   = new Date(n.getFullYear(), n.getMonth(), n.getDate()+epgDay+1).getTime();
+  epgDayStart = dayStart;
   const W = LW + (dayEnd-dayStart)/60000*PPM;
 
   const inner = document.createElement('div');
@@ -418,11 +444,24 @@ function renderEpg(keep){
   }
 
   sc.innerHTML = ''; sc.appendChild(inner);
+  if (!Object.values(TL).some(a => a.length) && epgStatus !== 'loading'){
+    const note = document.createElement('div'); note.className = 'e-note';
+    note.textContent = epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.' : 'لا توجد بيانات للجدول حاليًا.';
+    sc.appendChild(note);
+  }
   if (prev !== null) sc.scrollLeft = prev;
-  else if (epgDay === 0) sc.scrollLeft = Math.max(0, LW + (nowMs-dayStart)/60000*PPM - 300);
+  else if (epgDay === 0) sc.scrollLeft = Math.max(0, (nowMs-dayStart)/60000*PPM - 300);
   else sc.scrollLeft = 0;
-  showStatus();
+  showStatus(); updateNav();
 }
+
+function updateNav(){
+  const sc = $('eScroll'); const max = sc.scrollWidth - sc.clientWidth;
+  $('eLeft').disabled = sc.scrollLeft <= 2; $('eRight').disabled = sc.scrollLeft >= max - 2;
+  const a = epgDayStart + sc.scrollLeft/PPM*60000, b = a + Math.max(0, sc.clientWidth - LW)/PPM*60000;
+  $('eRange').textContent = fmtTime(a) + ' – ' + fmtTime(b);
+}
+const NAV_STEP = 3*60*PPM;   /* 3 ساعات في كل ضغطة */
 
 /* =============== فتح وإغلاق النوافذ =============== */
 function updateScrim(){ scrim.classList.toggle('on', menu.classList.contains('open') || epg.classList.contains('open')); }
@@ -447,22 +486,19 @@ function dock(inPlayer){
   (host || wrapEl).appendChild(banner);
 }
 
-/* مكان الأزرار: بين زر الجودة وزر تكبير الصورة، وزر الجدول جنب زر القنوات */
+/* مكان الزر: بين زر الجودة وزر تكبير/تصغير الصورة */
 function placeButtons(){
   const root = $('jwplayerDiv');
   const ch = root.querySelector('[button="channels-button"]') || root.querySelector('[aria-label="قائمة القنوات"]');
-  const ep = root.querySelector('[button="epg-button"]') || root.querySelector('[aria-label="جدول البرامج"]');
   const st = root.querySelector('[button="stretch-button"]') || root.querySelector('[aria-label="توسيع/تضييق الصورة"]');
   const se = root.querySelector('.jw-icon-settings');
   if (!ch || !st || !se) return;
   const stFirst = se.compareDocumentPosition(st) & Node.DOCUMENT_POSITION_PRECEDING;
   const later = stFirst ? se : st;
-  if (later.previousElementSibling !== ch && later.previousElementSibling !== ep) later.parentNode.insertBefore(ch, later);
-  if (ep && ch.nextElementSibling !== ep) ch.after(ep);
+  if (later.previousElementSibling !== ch) later.parentNode.insertBefore(ch, later);
 }
 function addBarButtons(){
   player.addButton(CH_ICON, "قائمة القنوات", toggleMenu, "channels-button");
-  player.addButton(EPG_ICON, "جدول البرامج", toggleEpg, "epg-button");
   [0, 300, 1000, 2500].forEach(t => setTimeout(placeButtons, t));
   player.on('fullscreen', () => setTimeout(placeButtons, 100));
   player.on('resize', () => setTimeout(placeButtons, 100));
@@ -527,8 +563,19 @@ $('closeBtn').addEventListener('click', ()=>setMenu(false));
 $('epgClose').addEventListener('click', ()=>setEpg(false));
 scrim.addEventListener('click', ()=>{ setMenu(false); setEpg(false); });
 $('logoHome').addEventListener('click', goHome);
-$('homeEpgBtn').addEventListener('click', toggleEpg);
+$('logoHome2').addEventListener('click', goHome);
+$('homeEpgBtn').addEventListener('click', ()=>setEpg(true));
+$('menuEpgBtn').addEventListener('click', ()=>setEpg(true));
 $('eDays').addEventListener('click', e=>{ const b=e.target.closest('.day-tab'); if(b){ epgDay=+b.dataset.k; renderEpg(false); } });
+$('eLeft').addEventListener('click', ()=>$('eScroll').scrollBy({left:-NAV_STEP, behavior:'smooth'}));
+$('eRight').addEventListener('click', ()=>$('eScroll').scrollBy({left:NAV_STEP, behavior:'smooth'}));
+$('eNow').addEventListener('click', ()=>{
+  if (epgDay !== 0){ epgDay = 0; renderEpg(false); return; }
+  const off = (Date.now()-epgDayStart)/60000*PPM;
+  $('eScroll').scrollTo({left: Math.max(0, off-300), behavior:'smooth'});
+});
+$('eScroll').addEventListener('scroll', ()=>requestAnimationFrame(updateNav));
+$('eScroll').addEventListener('wheel', e=>{ if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){ e.preventDefault(); $('eScroll').scrollLeft += e.deltaY; } }, {passive:false});
 $('eScroll').addEventListener('click', e=>{ const b=e.target.closest('.e-chn'); if(b) play(+b.dataset.i); });
 
 document.addEventListener('keydown', e=>{
