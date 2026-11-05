@@ -35,9 +35,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; padding:30px;
   background:#0b0d12; overflow:hidden;
 }
-/* طبقة مغبّشة من نفس الصورة تملأ الفراغ، وفوقها الصورة كاملة بنسبتها الأصلية */
-.bg-blur{position:absolute; inset:-40px; background:url("https://i.postimg.cc/hvShKf9x/690n.png") center/cover no-repeat; filter:blur(30px) brightness(.65)}
-.bg-main{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; display:block}
+.bg-main{position:absolute; inset:0; width:100%; height:100%; object-fit:fill; display:block}
 #home::after{content:""; position:absolute; inset:0; background:rgba(5,8,14,.22); pointer-events:none}
 #homeBox{position:relative; z-index:2; width:min(1040px, 94vw); border-radius:26px; padding:22px 22px 16px}
 .hd-left{display:flex; align-items:center; gap:12px}
@@ -152,7 +150,6 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 
 <main class="stage">
   <section id="home">
-    <div class="bg-blur"></div>
     <img class="bg-main" src="https://i.postimg.cc/hvShKf9x/690n.png" alt="">
     <div id="homeBox" class="glass">
       <div class="m-head">
@@ -263,7 +260,7 @@ function renderList(){
 const EPG_BASE = "https://www.artonline.tv";
 let EPG = {};          /* { 'YYYY-MM-DD': { رقم_القناة: [[دقائق_من_منتصف_الليل_GMT, عنوان], ...] } } */
 let TL  = {};          /* الجدول الموحد لكل قناة: [{s, e, title}] */
-let epgStatus = '', epgErr = '';
+let epgStatus = '', epgErr = '', epgGen = '';
 let lastLoadKey = '';
 
 function utcDay(offset){ const n=new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()+offset)); }
@@ -378,10 +375,34 @@ function updateNowNext(){
 /* =============== لوحة EPG =============== */
 const LW = 150, PPM = 200/60;
 function showStatus(){
-  const el = $('eStatus');
-  el.textContent = epgStatus==='loading' ? 'جاري تحديث الجدول...'
-    : epgStatus==='error' ? 'تعذّر تحميل الجدول' + (epgErr ? ' (' + epgErr + ')' : '')
-    : epgStatus==='empty' ? 'الموقع رد بدون برامج' : '';
+  let t = '';
+  if (epgStatus==='loading') t = 'جاري تحديث الجدول...';
+  else if (epgStatus==='error') t = 'تعذّر تحميل الجدول' + (epgErr ? ' (' + epgErr + ')' : '');
+  else if (epgStatus==='nofile') t = 'ملف الجدول غير موجود';
+  else if (epgStatus==='empty') t = 'الموقع رد بدون برامج';
+  else if (epgGen){
+    const g = new Date(epgGen), stale = Date.now() - g.getTime() > 48*3600e3;
+    t = 'آخر تحديث ' + g.toLocaleDateString('ar-EG-u-nu-latn', {day:'numeric', month:'numeric'}) + ' ' + fmtTime(g.getTime()) + (stale ? ' — قديم' : '');
+  }
+  $('eStatus').textContent = t;
+}
+
+/* الجدول بيتقرا من ملف epg-data.js (بيعمله fetch-epg.js مرة كل 24 ساعة) */
+function ingest(d){
+  if (!d || !d.days) return;
+  for (const k of Object.keys(d.days)) EPG[k] = d.days[k];
+  epgGen = d.generatedAt || ''; lsSet('art_epg_gen', epgGen); epgStatus = '';
+  prune(); lsSet('art_epg_v1', JSON.stringify(EPG));
+  rebuild(); showStatus();
+}
+function loadLocalEpg(){
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'epg-data.js?t=' + Date.now();
+    sc.onload  = () => { ingest(window.ART_EPG); sc.remove(); res(true); };
+    sc.onerror = () => { sc.remove(); res(false); };
+    document.head.appendChild(sc);
+  });
 }
 function renderEpg(keep){
   const sc = $('eScroll'); const prev = keep ? sc.scrollLeft : null;
@@ -446,7 +467,7 @@ function renderEpg(keep){
   sc.innerHTML = ''; sc.appendChild(inner);
   if (!Object.values(TL).some(a => a.length) && epgStatus !== 'loading'){
     const note = document.createElement('div'); note.className = 'e-note';
-    note.textContent = epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.' : 'لا توجد بيانات للجدول حاليًا.';
+    note.textContent = epgStatus==='nofile' ? 'لم يتم العثور على ملف الجدول (epg-data.js). شغّل fetch-epg.js مرة واحدة.' : epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.' : 'لا توجد بيانات للجدول حاليًا.';
     sc.appendChild(note);
   }
   if (prev !== null) sc.scrollLeft = prev;
@@ -596,15 +617,19 @@ window.addEventListener('beforeunload', ()=>{ if(player) player.remove(); });
 
 /* =============== تشغيل =============== */
 try { EPG = JSON.parse(lsGet('art_epg_v1') || '{}') || {}; } catch(e){ EPG = {}; }
+epgGen = lsGet('art_epg_gen') || '';
 renderList();
 rebuild();
-setTimeout(loadEpg, 800);
+loadLocalEpg().then(ok => {
+  if (!ok && !Object.values(TL).some(a => a.length)){ epgStatus = 'nofile'; showStatus(); }
+});
+setInterval(loadLocalEpg, 30*60000);          /* يعيد قراءة الملف كل نص ساعة */
 setInterval(()=>{
   updateNowNext();
   if (epgOpen && epgDay===0) renderEpg(true);
-  if (keyOfDate(utcDay(0)) !== lastLoadKey) loadEpg();
 }, 60000);
-setInterval(loadEpg, 3*3600e3);
+/* السحب المباشر شغال بس لو التطبيق وفّر window.artEpg */
+if (window.artEpg){ setTimeout(loadEpg, 800); setInterval(loadEpg, 3*3600e3); }
 </script>
 </body>
 </html>
