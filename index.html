@@ -67,6 +67,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
   transform:translate(-50%,-46%) scale(.97); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
 }
 #menu.open,#epg.open{opacity:1; transform:translate(-50%,-50%); pointer-events:auto}
+#menu.open.under{opacity:0; pointer-events:none; transform:translate(-50%,-54%) scale(.97)}
 #menu{width:min(1000px, calc(100vw - 60px)); max-height:calc(100vh - 60px); overflow:auto; padding:20px 22px 20px}
 .m-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
 .m-head img{width:46px; height:46px; border-radius:12px; object-fit:contain; background:var(--ink); border:1px solid var(--gold); cursor:pointer}
@@ -488,10 +489,12 @@ const NAV_STEP = 3*60*PPM;   /* 3 ساعات في كل ضغطة */
 function updateScrim(){ scrim.classList.toggle('on', menu.classList.contains('open') || epg.classList.contains('open')); }
 function setMenu(open){
   if (open) setEpg(false, true);
-  menu.classList.toggle('open', open); menu.setAttribute('aria-hidden', !open); updateScrim();
+  menu.classList.toggle('open', open); menu.classList.remove('under'); menu.setAttribute('aria-hidden', !open); updateScrim();
 }
+/* إغلاق الطبقة اللي فوق: الجدول أولًا (وترجع القائمة)، وبعدها القائمة */
+function closeTop(){ if (epg.classList.contains('open')) setEpg(false); else setMenu(false); }
 function setEpg(open, silent){
-  if (open && !silent) setMenu(false);
+  menu.classList.toggle('under', open && menu.classList.contains('open'));   /* القائمة تستخبى تحت الجدول */
   epgOpen = open; epg.classList.toggle('open', open); epg.setAttribute('aria-hidden', !open);
   if (open){ epgDay = 0; renderEpg(false); }
   updateScrim();
@@ -582,7 +585,7 @@ function goHome(){
 [listEl, homeGrid].forEach(el => el.addEventListener('click', e=>{ const b=e.target.closest('.ch'); if(b) play(+b.dataset.i); }));
 $('closeBtn').addEventListener('click', ()=>setMenu(false));
 $('epgClose').addEventListener('click', ()=>setEpg(false));
-scrim.addEventListener('click', ()=>{ setMenu(false); setEpg(false); });
+scrim.addEventListener('click', closeTop);
 $('logoHome').addEventListener('click', goHome);
 $('logoHome2').addEventListener('click', goHome);
 $('homeEpgBtn').addEventListener('click', ()=>setEpg(true));
@@ -605,7 +608,7 @@ document.addEventListener('keydown', e=>{
   if (k>='1' && k<=String(n)) play(+k-1);
   else if (k==='ArrowDown'||k==='PageDown'){ e.preventDefault(); play(current<0?0:(current+1)%n); }
   else if (k==='ArrowUp'||k==='PageUp'){ e.preventDefault(); play(current<0?n-1:(current-1+n)%n); }
-  else if (k==='Escape'){ setMenu(false); setEpg(false); }
+  else if (k==='Escape') closeTop();
   else if (k==='Tab'){ e.preventDefault(); toggleMenu(); }
   else if (k==='e'||k==='E') toggleEpg();
   else if (k==='h'||k==='H') goHome();
