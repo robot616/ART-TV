@@ -119,7 +119,9 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 .nav-btn:disabled{opacity:.35; cursor:default}
 .e-mid{display:flex; align-items:center; gap:12px; direction:rtl}
 #eRange{font-size:13px; color:var(--muted); direction:rtl}
-.e-note{position:absolute; top:90px; left:0; right:0; text-align:center; font-size:14px; color:var(--muted); direction:rtl; padding:0 30px; pointer-events:none}
+.e-notebar{display:none; margin-bottom:10px; padding:10px 14px; border-radius:12px; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.4); font-size:13.5px; line-height:1.8; direction:rtl}
+.e-notebar.show{display:block}
+.e-notebar code{display:block; margin-top:4px; direction:ltr; text-align:left; font-size:12px; color:var(--muted); word-break:break-all; font-family:Consolas,monospace}
 .e-inner{position:relative}
 .e-hours{position:sticky; top:0; height:36px; z-index:4; background:rgba(14,17,24,.94); border-bottom:1px solid rgba(255,255,255,.1)}
 .e-corner{position:sticky; left:0; z-index:6; height:36px; background:rgba(14,17,24,.98); border-right:1px solid rgba(255,255,255,.1)}
@@ -187,6 +189,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
     <span id="eStatus"></span>
     <button class="x-btn" id="epgClose" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
   </div>
+  <div class="e-notebar" id="eNoteBar"></div>
   <div class="e-nav">
     <button class="nav-btn" id="eLeft" aria-label="ساعات سابقة"><i class="fa-solid fa-chevron-left"></i> ساعات سابقة</button>
     <div class="e-mid"><button class="nav-btn" id="eNow">الآن</button><span id="eRange"></span></div>
@@ -394,7 +397,7 @@ function ingest(d){
   for (const k of Object.keys(d.days)) EPG[k] = d.days[k];
   epgGen = d.generatedAt || ''; lsSet('art_epg_gen', epgGen); epgStatus = '';
   prune(); lsSet('art_epg_v1', JSON.stringify(EPG));
-  rebuild(); showStatus();
+  rebuild(); showStatus(); updateNote();
 }
 function loadLocalEpg(){
   return new Promise(res => {
@@ -466,17 +469,25 @@ function renderEpg(keep){
   }
 
   sc.innerHTML = ''; sc.appendChild(inner);
-  if (!Object.values(TL).some(a => a.length) && epgStatus !== 'loading'){
-    const note = document.createElement('div'); note.className = 'e-note';
-    note.textContent = epgStatus==='nofile' ? 'لم يتم العثور على ملف الجدول (epg-data.js). شغّل fetch-epg.js مرة واحدة.' : epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.' : 'لا توجد بيانات للجدول حاليًا.';
-    sc.appendChild(note);
-  }
+  updateNote();
   if (prev !== null) sc.scrollLeft = prev;
   else if (epgDay === 0) sc.scrollLeft = Math.max(0, (nowMs-dayStart)/60000*PPM - 300);
   else sc.scrollLeft = 0;
   showStatus(); updateNav();
 }
 
+function updateNote(){
+  const bar = $('eNoteBar'), empty = !Object.values(TL).some(a => a.length);
+  if (!empty || epgStatus === 'loading'){ bar.classList.remove('show'); return; }
+  let url = ''; try { url = new URL('epg-data.js', location.href).href; } catch(e){}
+  bar.innerHTML = '';
+  const t = document.createElement('div');
+  t.textContent = epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.'
+    : 'لا توجد بيانات للجدول. شغّل update-epg.bat مرة، وتأكد إن ملف epg-data.js اتعمل في نفس مجلد الصفحة.';
+  bar.appendChild(t);
+  if (url){ const c = document.createElement('code'); c.textContent = 'الصفحة بتدوّر على الملف هنا: ' + url; bar.appendChild(c); }
+  bar.classList.add('show');
+}
 function updateNav(){
   const sc = $('eScroll'); const max = sc.scrollWidth - sc.clientWidth;
   $('eLeft').disabled = sc.scrollLeft <= 2; $('eRight').disabled = sc.scrollLeft >= max - 2;
