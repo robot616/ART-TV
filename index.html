@@ -482,8 +482,10 @@ function updateNote(){
   let url = ''; try { url = new URL('epg-data.js', location.href).href; } catch(e){}
   bar.innerHTML = '';
   const t = document.createElement('div');
+  const local = location.protocol === 'file:';
   t.textContent = epgStatus==='error' ? 'لم يتم تحميل جدول البرامج من الموقع.'
-    : 'لا توجد بيانات للجدول. شغّل update-epg.bat مرة، وتأكد إن ملف epg-data.js اتعمل في نفس مجلد الصفحة.';
+    : local ? 'لا توجد بيانات للجدول. شغّل update-epg.bat مرة، وتأكد إن ملف epg-data.js اتعمل في نفس مجلد الصفحة.'
+            : 'ملف الجدول لسه مش موجود على الموقع. شغّل Update EPG من تبويب Actions في GitHub مرة واحدة، وبعدها بيتحدث لوحده.';
   bar.appendChild(t);
   if (url){ const c = document.createElement('code'); c.textContent = 'الصفحة بتدوّر على الملف هنا: ' + url; bar.appendChild(c); }
   bar.classList.add('show');
