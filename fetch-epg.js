@@ -1,14 +1,15 @@
 /*
   fetch-epg.js  —  يسحب جدول قنوات ART من الموقع الرسمي ويحفظه في epg-data.js
   التشغيل:  node fetch-epg.js        (يحتاج Node.js 18 أو أحدث، بدون أي مكتبات)
-  حطه في نفس مجلد art-tv.html، وشغّله مرة كل 24 ساعة (أو من التطبيق: require('./fetch-epg').run()).
+  حطه في نفس مجلد art-tv.html (أو اكتب مسار مجلد الصفحة بعد اسمه)، وشغّله مرة كل 24 ساعة (أو من التطبيق: require('./fetch-epg').run()).
   لو الموقع فشل أو غيّر شكله، البيانات القديمة في الملف بتفضل زي ما هي.
 */
 const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.ART_BASE || 'https://www.artonline.tv';
-const OUT  = path.join(__dirname, 'epg-data.js');
+/* الحفظ جنب السكربت، أو في مجلد تحدده:  node fetch-epg.js "C:\\مسار\\مجلد-الصفحة"  */
+const OUT  = path.join(process.env.ART_EPG_DIR || (require.main === module && process.argv[2]) || __dirname, 'epg-data.js');
 const UA   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
 /* رقم القناة في الصفحة  ←  عنوان الطلب في الموقع */
