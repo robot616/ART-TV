@@ -58,7 +58,6 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 #banner.show{opacity:1; transform:none}
 #banner .badge{width:76px; height:44px}
 #banner .t1{font-weight:800; font-size:18px}
-#banner .t2{font-size:13px; color:var(--muted); margin-top:3px; max-width:340px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* ستار + نوافذ */
 #scrim{position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .25s}
@@ -128,7 +127,10 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 .e-inner{position:relative}
 .e-hours{position:sticky; top:0; height:36px; z-index:4; background:rgba(14,17,24,.94); border-bottom:1px solid rgba(255,255,255,.1)}
 .e-corner{position:sticky; right:0; z-index:6; height:36px; background:rgba(14,17,24,.98); border-left:1px solid rgba(255,255,255,.1)}
-.e-hour{position:absolute; top:9px; font-size:12px; color:var(--muted); padding-right:6px; border-right:1px solid rgba(255,255,255,.1); height:18px; line-height:18px; direction:rtl}
+.e-hour{position:absolute; top:4px; height:28px; display:flex; align-items:center; padding:0 10px; border:1px solid rgba(255,255,255,.16); border-radius:8px; background:rgba(255,255,255,.05); font-size:12.5px; font-weight:700; color:var(--text); direction:rtl}
+.e-hour span{direction:ltr}
+.e-hour.cur{border-color:var(--green); color:var(--green); background:rgba(34,197,94,.1)}
+.e-grid{position:absolute; top:36px; bottom:0; left:0; background:repeating-linear-gradient(to left, rgba(255,255,255,.08) 0 1px, transparent 1px 200px); pointer-events:none}
 .e-row{position:relative; height:66px; border-bottom:1px solid rgba(255,255,255,.08)}
 .e-chn{position:sticky; right:0; z-index:3; width:150px; height:100%; display:flex; align-items:center; gap:8px; padding:0 10px; direction:rtl; text-align:right; background:rgba(14,17,24,.97); border:0; border-left:1px solid rgba(255,255,255,.1); color:var(--text)}
 .e-chn:hover{background:rgba(30,36,50,.99)}
@@ -237,11 +239,8 @@ const STRETCH_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
 const pad = n => String(n).padStart(2,'0');
-function fmtTime(ms){
-  const d=new Date(ms); let h=d.getHours(); const m=d.getMinutes(); const ap=h>=12?'م':'ص'; h=h%12||12;
-  return h+':'+pad(m)+' '+ap;
-}
-function fmtHour(ms){ let h=new Date(ms).getHours(); const ap=h>=12?'م':'ص'; h=h%12||12; return h+' '+ap; }
+function fmtTime(ms){ const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtHour(ms){ return pad(new Date(ms).getHours()) + ':00'; }
 
 function badgeHTML(ch){
   return `<span class="badge" style="--c:${ch.c}"><i class="fa-solid ${ch.icon}"></i><img src="${ch.logo}" alt="" onerror="this.remove()"></span>`;
@@ -434,12 +433,17 @@ function renderEpg(keep){
   const hours = document.createElement('div'); hours.className = 'e-hours';
   hours.innerHTML = '<div class="e-corner" style="width:'+LW+'px"></div>';
   for (let h=0; h<24; h++){
-    const t = new Date(n.getFullYear(), n.getMonth(), n.getDate()+epgDay, h).getTime();
-    const el = document.createElement('div'); el.className='e-hour';
-    el.style.right = (LW + (t-dayStart)/60000*PPM) + 'px'; el.textContent = fmtHour(t);
+    const t  = new Date(n.getFullYear(), n.getMonth(), n.getDate()+epgDay, h).getTime();
+    const t2 = new Date(n.getFullYear(), n.getMonth(), n.getDate()+epgDay, h+1).getTime();
+    const el = document.createElement('div');
+    el.className = 'e-hour' + (nowMs >= t && nowMs < t2 ? ' cur' : '');
+    el.style.right = (LW + (t-dayStart)/60000*PPM) + 'px';           /* نفس بداية البرامج تحته بالظبط */
+    el.style.width = ((t2-t)/60000*PPM - 4) + 'px';                  /* ونفس نهايتها (نقص 4px زي البرامج) */
+    const sp = document.createElement('span'); sp.textContent = fmtHour(t); el.appendChild(sp);
     hours.appendChild(el);
   }
   inner.appendChild(hours);
+  const grid = document.createElement('div'); grid.className = 'e-grid'; grid.style.right = LW + 'px'; inner.appendChild(grid);
 
   CHANNELS.forEach((ch,i)=>{
     const row = document.createElement('div'); row.className = 'e-row';
@@ -545,14 +549,9 @@ function addBarButtons(){
 }
 
 function flashBanner(ch){
-  const now = Date.now(), cur = (TL[ch.num] || []).find(p => p.s <= now && now < p.e);
-  banner.innerHTML = badgeHTML(ch);
-  const box = document.createElement('div');
-  const t1 = document.createElement('div'); t1.className = 't1'; t1.textContent = ch.name; box.appendChild(t1);
-  if (cur){ const t2 = document.createElement('div'); t2.className = 't2'; t2.textContent = cur.title; box.appendChild(t2); }
-  banner.appendChild(box);
+  banner.innerHTML = `${badgeHTML(ch)}<div class="t1">${ch.name}</div>`;
   banner.classList.add('show'); clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(()=>banner.classList.remove('show'), 4000);
+  bannerTimer = setTimeout(()=>banner.classList.remove('show'), 3500);
 }
 
 function play(i){
