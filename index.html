@@ -37,7 +37,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 }
 .bg-main{position:absolute; inset:0; width:100%; height:100%; object-fit:fill; display:block}
 #home::after{content:""; position:absolute; inset:0; background:rgba(5,8,14,.22); pointer-events:none}
-#homeBox{position:relative; z-index:2; width:min(1040px, 94vw); border-radius:26px; padding:22px 22px 16px}
+#homeBox{position:relative; z-index:2; width:min(1100px, 94vw); border-radius:26px; padding:22px 22px 16px}
 .hd-left{display:flex; align-items:center; gap:12px}
 .hd-btn{display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:var(--text); font-weight:700; font-size:14px}
 .hd-btn:hover{background:rgba(255,255,255,.18)}
@@ -68,14 +68,14 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 }
 #menu.open,#epg.open{opacity:1; transform:translate(-50%,-50%); pointer-events:auto}
 #menu.open.under{opacity:0; pointer-events:none; transform:translate(-50%,-54%) scale(.97)}
-#menu{width:min(1000px, calc(100vw - 60px)); max-height:calc(100vh - 60px); overflow:auto; padding:20px 22px 20px}
+#menu{width:min(1100px, calc(100vw - 60px)); max-height:calc(100vh - 60px); overflow:auto; padding:20px 22px 20px}
 .m-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
 .m-head img{width:46px; height:46px; border-radius:12px; object-fit:contain; background:var(--ink); border:1px solid var(--gold); cursor:pointer}
 .x-btn{width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); color:var(--muted)}
 .x-btn:hover{color:var(--text); background:rgba(255,255,255,.14)}
 
 /* كروت القنوات */
-.grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:14px; direction:rtl}
+.grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px; direction:rtl}
 .ch{
   position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; padding:16px 12px 14px; min-width:0;
   background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.13); border-radius:18px; transition:transform .15s, border-color .15s, background .15s;
@@ -105,7 +105,7 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 .bar u{display:block; height:100%; width:0; background:var(--green)}
 
 /* جدول البرامج EPG */
-#epg{width:min(1240px, calc(100vw - 50px)); height:min(560px, calc(100vh - 60px)); display:flex; flex-direction:column; padding:16px 18px 18px}
+#epg{width:min(1240px, calc(100vw - 50px)); height:min(660px, calc(100vh - 40px)); display:flex; flex-direction:column; padding:16px 18px 18px}
 .e-head{display:flex; align-items:center; gap:12px; margin-bottom:12px}
 .e-days{display:flex; gap:8px; flex:1; overflow-x:auto}
 .day-tab{padding:7px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); white-space:nowrap; font-size:13px}
@@ -131,13 +131,13 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 .e-hour span{direction:ltr}
 .e-hour.cur{border-color:var(--green); color:var(--green); background:rgba(34,197,94,.1)}
 .e-grid{position:absolute; top:36px; bottom:0; left:0; background:repeating-linear-gradient(to left, rgba(255,255,255,.08) 0 1px, transparent 1px 200px); pointer-events:none}
-.e-row{position:relative; height:66px; border-bottom:1px solid rgba(255,255,255,.08)}
+.e-row{position:relative; height:62px; border-bottom:1px solid rgba(255,255,255,.08)}
 .e-chn{position:sticky; right:0; z-index:3; width:150px; height:100%; display:flex; align-items:center; gap:8px; padding:0 10px; direction:rtl; text-align:right; background:rgba(14,17,24,.97); border:0; border-left:1px solid rgba(255,255,255,.1); color:var(--text)}
 .e-chn:hover{background:rgba(30,36,50,.99)}
 .e-chn .badge{width:54px; height:34px; border-radius:8px; font-size:14px}
 .e-chn span.nm{font-size:13px; font-weight:700; line-height:1.3}
 .e-prog{
-  position:absolute; top:7px; height:52px; border-radius:10px; padding:6px 10px; overflow:hidden; direction:rtl; text-align:right;
+  position:absolute; top:6px; height:50px; border-radius:10px; padding:5px 10px; overflow:hidden; direction:rtl; text-align:right;
   background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
 }
 .e-prog.now{border-color:var(--green); background:rgba(34,197,94,.16)}
@@ -206,23 +206,26 @@ button{font-family:inherit; color:inherit; cursor:pointer}
 <script>
 /* =============== القنوات =============== */
 const CHANNELS = [
-  { num:1, name:"ART حكايات 1", icon:"fa-book-open", c:"#e0457b", epg:"/Home/TvlistHekayat",
+  { id:1, name:"ART حكايات 1", icon:"fa-book-open", c:"#e0457b", epg:"/Home/TvlistHekayat",
     logo:"https://www.artonline.tv/images/ART_Logo/art_hekayat.png",
     url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Hekayat/DASH/ART_Hekayat.mpd",
     k1:"3d614bb04140eda383d117fb55e9a361", k2:"b669cdf2cb65eff56d1e3534c7a54b53" },
-  { num:2, name:"ART حكايات 2", icon:"fa-feather-pointed", c:"#9b5de5", epg:"/Home/TvlistHekayat2",
+  { id:2, name:"ART حكايات 2", icon:"fa-feather-pointed", c:"#9b5de5", epg:"/Home/TvlistHekayat2",
     logo:"https://www.artonline.tv/images/ART_Logo/art_hekayat_2.png",
     url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Hekayat_2/DASH/ART_Hekayat_2.mpd",
     k1:"4ccb01903d6868e27953ff0298d4ac05", k2:"d156518d6ab453d9f9d12c243280be8f" },
-  { num:3, name:"ART أفلام 1", icon:"fa-film", c:"#f59e0b", epg:"/Home/Tvlist",
+  { id:3, name:"ART أفلام 1", icon:"fa-film", c:"#f59e0b", epg:"/Home/Tvlist",
     logo:"https://www.artonline.tv/images/ART_Logo/ART_AFLAM_1w.png",
     url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Aflam/DASH/ART_Aflam.mpd",
     k1:"264e7cb9dfd6b9e5c281c97db4c2b4fa", k2:"47425a7e8f7e4030d186559852ae97db" },
-  { num:4, name:"ART أفلام 2", icon:"fa-clapperboard", c:"#14b8a6", epg:"/Home/TvlistAflam2",
+  { id:6, name:"ART Movies", icon:"fa-video", c:"#ef4444",
+    logo:"https://kgn8e7pxwwfp.merlincdn.net/content/N/W4/273207/logo_50.png?v=638929337659412992",
+    url:"https://mysat-live.ercdn.net/artmovies/artmovies.m3u8" },
+  { id:4, name:"ART أفلام 2", icon:"fa-clapperboard", c:"#14b8a6", epg:"/Home/TvlistAflam2",
     logo:"https://www.artonline.tv/images/ART_Logo/ART_AFLAM_2w.png",
     url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Aflam_2/DASH/ART_Aflam_2.mpd",
     k1:"809a386e57689d56c01a5c3190889641", k2:"d54639bb7d418d515e5198663a6d7ae5" },
-  { num:5, name:"ART سينما", icon:"fa-ticket", c:"#3b82f6", epg:"/Home/TvlistCinema",
+  { id:5, name:"ART سينما", icon:"fa-ticket", c:"#3b82f6", epg:"/Home/TvlistCinema",
     logo:"https://www.artonline.tv/images/ART_Logo/cinema-logo.png",
     url:"https://ev-fast-mpd.starzplayarabia.com/live/eds/ART_Cinema/DASH/ART_Cinema.mpd",
     k1:"bd484fc91dcf152010a0e367e15ab60e", k2:"d9bed0a77b7da410129820bcc6606670" }
@@ -247,8 +250,8 @@ function badgeHTML(ch){
 }
 function renderList(){
   const html = CHANNELS.map((ch,i)=>`
-    <button class="ch ${i===current?'active':''}" data-i="${i}" data-num="${ch.num}">
-      <span class="ch-key">${ch.num}</span>
+    <button class="ch ${i===current?'active':''}" data-i="${i}" data-id="${ch.id}">
+      <span class="ch-key">${i+1}</span>
       ${badgeHTML(ch)}
       <span class="ch-name">${ch.name}<span class="live-dot"></span></span>
       <span class="ch-prog">
@@ -319,7 +322,7 @@ async function loadEpg(){
       try{
         let items = parseDay(await ask(text));
         if (!items.length) items = parseDay(await ask(' ' + text));
-        (EPG[key] = EPG[key] || {})[ch.num] = items; ok++; if (items.length) got++;
+        (EPG[key] = EPG[key] || {})[ch.id] = items; ok++; if (items.length) got++;
       }catch(e){ fail++; if (!epgErr) epgErr = (e && e.message) ? e.message : String(e); console.warn('EPG:', ch.epg, e); }
     }));
     rebuild();
@@ -339,7 +342,7 @@ function rebuild(){
   for (const ch of CHANNELS){
     const arr = [];
     for (const key of keys){
-      const items = (EPG[key] || {})[ch.num]; if (!items) continue;
+      const items = (EPG[key] || {})[ch.id]; if (!items) continue;
       const [y,m,d] = key.split('-').map(Number); const base = Date.UTC(y, m-1, d);
       for (const [mins, title] of items) arr.push({s: base + mins*60000, title});
     }
@@ -351,7 +354,7 @@ function rebuild(){
       if (e - p.s > 4*3600e3) e = p.s + 3*3600e3;      /* فجوة طويلة: نكتفي بـ 3 ساعات */
       p.e = e;
     });
-    TL[ch.num] = clean;
+    TL[ch.id] = clean;
   }
   updateNowNext();
   if (epgOpen) renderEpg(true);
@@ -360,10 +363,10 @@ function rebuild(){
 function updateNowNext(){
   const now = Date.now();
   for (const ch of CHANNELS){
-    const arr = TL[ch.num] || [];
+    const arr = TL[ch.id] || [];
     const cur = arr.find(p => p.s <= now && now < p.e);
     const nxt = arr.find(p => p.s > now);
-    document.querySelectorAll('.ch[data-num="'+ch.num+'"]').forEach(card=>{
+    document.querySelectorAll('.ch[data-id="'+ch.id+'"]').forEach(card=>{
       const nl = card.querySelector('.n-line'), bar = card.querySelector('.bar'), xl = card.querySelector('.x-line');
       nl.classList.toggle('show', !!cur); bar.classList.toggle('show', !!cur); xl.classList.toggle('show', !!nxt);
       if (cur){
@@ -451,7 +454,7 @@ function renderEpg(keep){
     cell.innerHTML = badgeHTML(ch) + '<span class="nm">'+ch.name+'</span>';
     row.appendChild(cell);
     let count = 0;
-    for (const p of (TL[ch.num] || [])){
+    for (const p of (TL[ch.id] || [])){
       if (p.e <= dayStart || p.s >= dayEnd) continue;
       const s = Math.max(p.s, dayStart), e = Math.min(p.e, dayEnd);
       const b = document.createElement('div');
@@ -561,7 +564,7 @@ function play(i){
   homeEl.style.display='none'; wrapEl.classList.add('on');
   flashBanner(ch);
 
-  const item = { file: ch.url, drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } } };
+  const item = ch.k1 ? { file: ch.url, drm:{ clearkey:{ keyId: ch.k1, key: ch.k2 } } } : { file: ch.url };
 
   /* المشغل شغال: نبدّل القناة جواه (ملء الشاشة والقوائم يفضلوا زي ما هم) */
   if (player && !playerBroken){ player.load([item]); player.play(true); return; }
