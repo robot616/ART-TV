@@ -1,3 +1,32 @@
-@echo off
-node "%~dp0fetch-epg.js" %*
-pause
+# يسحب جدول قنوات ART من الموقع الرسمي ويحفظه في epg-data.js داخل المستودع (فيظهر على GitHub Pages)
+name: Update EPG
+
+on:
+  schedule:
+    - cron: '10 0,12 * * *'     # مرتين يوميًا (الساعة 00:10 و12:10 بتوقيت GMT)
+  workflow_dispatch:             # زر تشغيل يدوي من تبويب Actions
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch EPG from artonline.tv
+        run: node fetch-epg.js
+        env:
+          ART_MOVIES_TZ: America/New_York   # توقيت مواعيد ART Movies في ontvtonight (غيّره لو البرنامج الشغال مش مطابق)
+
+      - name: Commit epg-data.js
+        run: |
+          git config user.name "epg-bot"
+          git config user.email "epg-bot@users.noreply.github.com"
+          git add epg-data.js
+          git diff --cached --quiet && echo "no changes" || (git commit -m "Update EPG" && git push)
