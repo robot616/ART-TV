@@ -24,6 +24,7 @@ jobs:
         run: node fetch-epg.js
         env:
           ART_MOVIES_TZ: UTC+7
+          ART_MOVIES_SHIFT_HOURS: 24
       - name: Commit epg-data.js
         run: |
           git config user.name "epg-bot"
