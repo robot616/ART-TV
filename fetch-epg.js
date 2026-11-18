@@ -120,19 +120,36 @@ function parseMoviesPage(html, pageDate) {
 
 async function getText(url, headers) {
   const r = await fetch(url, { headers, signal: AbortSignal.timeout(20000) });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.text();
+  const body = await r.text();
+  if (!r.ok) {
+    const snip = body.replace(/\s+/g, ' ').slice(0, 120);
+    throw new Error('HTTP ' + r.status + (snip ? ' — ' + snip : ''));
+  }
+  return body;
 }
+
+/* هيدرز شبه المتصفح الحقيقي لموقع ontvtonight (بيرفض الطلبات اللي شكلها سكربت) */
+const MOVIES_HEADERS = {
+  'User-Agent': UA,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'no-cache',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1'
+};
 
 /* وقت بتوقيت القاهرة للعرض في اللوج بس (للمقارنة بالبث الفعلي) */
 const cairoFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 async function fetchMovies(data) {
-  const headers = { 'User-Agent': UA, 'Accept-Language': 'en-US,en;q=0.8' };
+  const headers = MOVIES_HEADERS;
   const first = await withRetry(() => getText(MOVIES.url, headers));
   const dates = []; const re = /<option value="(\d{4}-\d{2}-\d{2})"/g; let m;
   while ((m = re.exec(first))) dates.push(m[1]);
-  if (!dates.length) throw new Error('مش لاقي قايمة التواريخ في صفحة ART Movies');
+  if (!dates.length) throw new Error('مش لاقي قايمة التواريخ في صفحة ART Movies. أول 150 حرف من الرد: ' + first.replace(/\s+/g, ' ').slice(0, 150));
 
   const rows = []; let pagesOk = 0;
   for (const d of dates) {
@@ -238,7 +255,10 @@ async function run() {
 
   // 2.5) ART Movies من مصدر تاني (لو فشل، باقي القنوات مش بتتأثر)
   try { const n = await fetchMovies(data); if (n) { ok += n; withPrograms += n; } else fail++; }
-  catch (e) { fail++; console.warn('تعذّر ART Movies:', e.message, '(بنسيب بياناتها القديمة)'); }
+  catch (e) {
+    fail++; console.warn('تعذّر ART Movies:', e.message, '(بنسيب بياناتها القديمة)');
+    if (process.env.GITHUB_ACTIONS) console.log('::warning title=ART Movies EPG failed::' + e.message);   // يظهر باللون الأصفر في صفحة الـ Action
+  }
 
   if (!ok || !withPrograms) throw new Error('مفيش ولا جدول اتسحب (نجح ' + ok + '، فشل ' + fail + '). الملف القديم اتسابت زي ما هو.');
 
