@@ -6,6 +6,7 @@
 
   متغيرات اختيارية:
     ART_MOVIES_TZ   توقيت مواعيد ontvtonight. اسم منطقة (America/New_York) أو إزاحة ثابتة (UTC+7 أو +07:00). الافتراضي: UTC+7
+    ART_MOVIES_SHIFT_HOURS  إزاحة بالساعات على مواعيد ART Movies (الافتراضي 24 لأن الموقع بيكتب التاريخ متأخر يوم)
     ART_MOVIES_URL  رابط صفحة القناة
     ART_BASE        عنوان موقع ART الرسمي
     ART_EPG_DIR     مجلد الحفظ
@@ -68,13 +69,77 @@ function parseDay(txt) {
 const MOVIES = {
   id: 6,
   url: process.env.ART_MOVIES_URL || 'https://www.ontvtonight.com/guide/listings/channel/69033482/art-movies.html',
-  tz:  process.env.ART_MOVIES_TZ  || 'UTC+7'
+  tz:  process.env.ART_MOVIES_TZ  || 'UTC+7',
+  /* الموقع بيكتب تاريخ البرنامج متأخر يوم عن البث الفعلي (برنامج 22:30 مكتوب عليه 17 بيكون شغال فعلًا يوم 18).
+     الإزاحة بالساعات بتتضاف على كل المواعيد. لو لقيت البرنامج الشغال متقدم/متأخر غيّرها (0 = من غير إزاحة) */
+  shiftH: Number(process.env.ART_MOVIES_SHIFT_HOURS ?? 24)
 };
+const SHIFT_MS = MOVIES.shiftH * 3600e3;
 
 function decodeHtml(t) {
   return t.replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16)))
           .replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n))
           .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
+
+/* ============ تحويل أسماء الأفلام من إنجليزي/فرانكو إلى عربي ============ */
+/* الموقع بيكتب الأسماء العربية بحروف إنجليزية (Al Deazel = الديزل). القاموس ده بيرجّعها عربي صح.
+   أي كلمة مش موجودة فيه بتتحوّل بقواعد الفرانكو (sa3d = سعد) وبتتكتب في اللوج عشان تضيفها هنا.
+   الكلمات مكتوبة بدون "ال" (لأن Al بتتحول لـ "ال" وتلزق في الكلمة اللي بعدها). */
+const AR_WORDS = {
+  "a'am":"عم","a'ysh":"عيش","adel":"عادل","aela":"عائلة","ahlam":"أحلام","ahmad":"أحمد","ali":"علي","ana":"أنا","anfeh":"أنفه",
+  "aqmar":"أقمار","arba'a":"أربعة","aref":"عارف","arousa":"عروسة","arousti":"عروستي","ayyam":"أيام","azraq":"أزرق","azwag":"أزواج",
+  "baher":"بحر","balad":"بلد","banat":"بنات","batal":"بطل","bateniya":"باطنية","beh":"بيه","bint":"بنت","boulbol":"بلبل",
+  "deazel":"ديزل","e'bada":"عبادة","e'esh":"عيش","eish":"عيش","ersan":"عرسان","fadiha":"فضيحة","farah":"فرح","fatina":"فاتنة",
+  "fi":"في","ga'altani":"جعلتني","ghani":"غني","gharamiyya":"غرامية","goz":"جوز","had":"حد","haha":"هاها","haqan":"حقاً",
+  "hareb":"هارب","hatta":"حتى","hawa":"هوا","hawak":"هواك","haya":"حياة","helou":"حلو","herman":"حرمان","hob":"حب","hobak":"حبك",
+  "ikhtiyar":"اختيار","imam":"إمام","inaha":"إنها","karmouz":"كرموز","khadema":"خادمة","khaliya":"خلية","khiyana":"خيانة",
+  "kountou":"كنت","lamine":"لمين","law":"لو","layali":"ليالي","lezza":"لذة","louqmat":"لقمة","ma":"ما","ma'ahom":"معاهم",
+  "mahatet":"محطة","mandil":"منديل","maqam":"مقام","mazhar":"مظهر","min":"من","mougriman":"مجرماً","mouhtaline":"محتالين",
+  "mouhtarama":"محترمة","mountaha":"منتهى","mourgan":"مرجان","moush":"مش","nar":"نار","nas":"ناس","nashal":"نشل","omar":"عمر",
+  "ouns":"أنس","qartaba":"قرطبة","rabi'e":"ربيع","raghma":"رغم","rehla":"رحلة","resalat":"رسالة","saheb":"صاحب","salam":"سلام",
+  "salma":"سلمى","saye'e":"صايع","shanab":"شنب","share'e":"شارع","sharq":"شرق","shayatine":"شياطين","shelat":"شلة",
+  "tahdeed":"تهديد","tahta":"تحت","talaga":"ثلاجة","toufaha":"تفاحة","tqoulsh":"تقولش","waraq":"ورق","welad":"ولاد","west":"وسط",
+  "ya":"يا","zalamouni":"ظلموني","zamalek":"زمالك","zawat":"ذوات","zay":"زي","zouhour":"زهور"
+};
+const AR_WHOLE = { "fill in": "فاصل" };   /* عناوين كاملة ليها ترجمة خاصة */
+
+/* قواعد الفرانكو للكلمات الغريبة. الأرقام جوه الكلمة: 3=ع 7=ح 5=خ 2=ء 9=ص 6=ط 8=غ */
+const FR_DIGRAPHS = [['kh','خ'],['sh','ش'],['gh','غ'],['th','ث'],['dh','ذ'],['ch','ش'],['ou','و'],['oo','و'],['ee','ي'],['ei','ي'],['ai','ي'],['aa','ا'],['ie','ي']];
+const FR_CHARS = { b:'ب',t:'ت',g:'ج',j:'ج',h:'ه',d:'د',r:'ر',z:'ز',s:'س',f:'ف',q:'ق',k:'ك',c:'ك',l:'ل',m:'م',n:'ن',w:'و',y:'ي',p:'ب',v:'ف',x:'كس',
+                    "'":'ع','3':'ع','7':'ح','5':'خ','2':'ء','9':'ص','6':'ط','8':'غ','4':'ش' };
+function franco(w) {
+  const x = w.toLowerCase(); let out = '';
+  for (let i = 0; i < x.length; i++) {
+    const dg = FR_DIGRAPHS.find(([k]) => x.startsWith(k, i));
+    if (dg) { out += dg[1]; i += dg[0].length - 1; continue; }
+    const c = x[i];
+    if ('aeiou'.includes(c)) { if (i === 0) out += 'ا'; else if (i === x.length - 1 && (c === 'a' || c === 'o')) out += (c === 'a' && x.endsWith('iya') ? '' : 'ا'); continue; }   /* الحركات القصيرة بتتحذف */
+    out += FR_CHARS[c] !== undefined ? FR_CHARS[c] : c;
+  }
+  return out.replace(/ياا$/, 'ية');
+}
+const unknownWords = new Set();
+function arabize(title) {
+  title = String(title || '').trim();
+  if (!/[A-Za-z]/.test(title)) return title;                       /* عربي أصلًا */
+  const whole = AR_WHOLE[title.toLowerCase().replace(/\s+/g, ' ')];
+  if (whole) return whole;
+  const toks = title.split(/\s+/), out = []; let glue = '';        /* glue = بادئة بتلزق في الكلمة اللي بعدها (ال / و / ل) */
+  for (const raw of toks) {
+    const k = raw.toLowerCase();
+    if (/^\d+$/.test(raw)) { out.push(glue + raw); glue = ''; continue; }
+    if (k === 'al' || k === 'el') { glue += 'ال'; continue; }
+    if (k === 'w' || k === 'wa') { glue += 'و'; continue; }
+    if (k === 'li') { glue += 'ل'; continue; }
+    let ar = AR_WORDS[k];
+    if (ar === undefined) { unknownWords.add(raw); ar = franco(raw); }
+    let word = glue + ar; glue = '';
+    out.push(word);
+  }
+  if (glue) out.push(glue);
+  return out.join(' ').replace(/لال/g, 'لل');
 }
 
 /* إزاحة ثابتة مكتوبة زي UTC+7 أو +07:00 أو GMT-5:30  ←  مللي ثانية (أو null لو الاسم منطقة زمنية عادية) */
@@ -162,8 +227,8 @@ async function fetchMovies(data) {
   const seen = new Set(), list = [];
   for (const r of rows) {
     const [y, mo, d] = r.date.split('-').map(Number);
-    const t = zonedToUtc(y, mo, d, r.h, r.m, MOVIES.tz);
-    if (!seen.has(t)) { seen.add(t); list.push({ t, title: r.title }); }   // برنامج واحد لكل لحظة بداية
+    const t = zonedToUtc(y, mo, d, r.h, r.m, MOVIES.tz) + SHIFT_MS;
+    if (!seen.has(t)) { seen.add(t); list.push({ t, title: arabize(r.title) }); }   // برنامج واحد لكل لحظة بداية
   }
   list.sort((a, b) => a.t - b.t);
 
@@ -176,7 +241,7 @@ async function fetchMovies(data) {
 
   /* التغطية: من أول يوم لآخر يوم في قايمة الموقع (بتوقيته) */
   const [fy, fm, fd] = dates[0].split('-').map(Number), [ly, lm, ld] = dates[dates.length - 1].split('-').map(Number);
-  const covStart = zonedToUtc(fy, fm, fd, 0, 0, MOVIES.tz), covEnd = zonedToUtc(ly, lm, ld + 1, 0, 0, MOVIES.tz);
+  const covStart = zonedToUtc(fy, fm, fd, 0, 0, MOVIES.tz) + SHIFT_MS, covEnd = zonedToUtc(ly, lm, ld + 1, 0, 0, MOVIES.tz) + SHIFT_MS;
   const byDay = {};
   for (const p of list) {
     const dt = new Date(p.t), key = dt.toISOString().slice(0, 10);
@@ -195,7 +260,8 @@ async function fetchMovies(data) {
     (data.days[key] = data.days[key] || {})[MOVIES.id] = [...merged.values()].sort((p, q) => p[0] - q[0]);
     written++;
   }
-  console.log(`ART Movies: ${rows.length} صف من ${pagesOk} صفحة، ${written} يوم اتحفظ (التوقيت ${MOVIES.tz})`);
+  if (unknownWords.size) console.warn('كلمات مش في القاموس (اتحوّلت تلقائيًا، راجعها وضيفها في AR_WORDS):', [...unknownWords].join(', '));
+  console.log(`ART Movies: ${rows.length} صف من ${pagesOk} صفحة، ${written} يوم اتحفظ (التوقيت ${MOVIES.tz}، إزاحة ${MOVIES.shiftH} ساعة)`);
   return written;
 }
 
@@ -275,5 +341,5 @@ async function run() {
   return { ok, fail };
 }
 
-module.exports = { run };
+module.exports = { run, arabize };
 if (require.main === module) run().catch(e => { console.error('فشل التحديث:', e.message); process.exit(1); });
