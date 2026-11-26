@@ -6,6 +6,7 @@
 
   متغيرات اختيارية:
     ART_MOVIES_URL  رابط صفحة القناة على tvpassport (من غير التاريخ)
+    ART_MOVIES_MIN_DAYS  أقل عدد أيام مخزّنة قدام قبل ما نسحب ART Movies تاني (الافتراضي 3)
     ART_BASE        عنوان موقع ART الرسمي
     ART_EPG_DIR     مجلد الحفظ
 */
@@ -66,7 +67,9 @@ function parseDay(txt) {
 const MOVIES = {
   id: 6,
   url: (process.env.ART_MOVIES_URL || 'https://www.tvpassport.com/tv-listings/stations/art-movie-america/33199').replace(/\/+$/, ''),
-  tz:  'Africa/Cairo'
+  tz:  'Africa/Cairo',
+  /* السحب مش كل مرة: لو المخزّن عندنا بيغطي كفاية قدام، بنتخطى السحب. بنسحب تاني لما يفضل أقل من كده (بالأيام) */
+  minDaysAhead: Number(process.env.ART_MOVIES_MIN_DAYS || 3)
 };
 
 function decodeHtml(t) {
@@ -207,6 +210,19 @@ const MOVIES_HEADERS = {
 const cairoFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 async function fetchMovies(data) {
+  /* آخر برنامج متخزّن للقناة (GMT)، ولو لسه بيغطي كفاية قدام منسحبش تاني */
+  let lastStored = 0;
+  for (const [key, chs] of Object.entries(data.days)) {
+    const arr = (chs || {})[MOVIES.id]; if (!arr || !arr.length) continue;
+    const [y, mo, d] = key.split('-').map(Number);
+    lastStored = Math.max(lastStored, Date.UTC(y, mo - 1, d) + Math.max(...arr.map(x => x[0])) * 60000);
+  }
+  const daysLeft = (lastStored - Date.now()) / 86400e3;
+  if (daysLeft >= MOVIES.minDaysAhead) {
+    console.log(`ART Movies: المخزّن بيغطي ${daysLeft.toFixed(1)} يوم قدام (الحد ${MOVIES.minDaysAhead}) — مفيش سحب جديد.`);
+    return null;
+  }
+  console.log(`ART Movies: المخزّن بيغطي ${Math.max(0, daysLeft).toFixed(1)} يوم بس — هنسحب من tvpassport.`);
   const headers = MOVIES_HEADERS;
   /* التواريخ: اليوم (بتوقيت القاهرة) + 13 يوم قدام، من غير الاعتماد على شكل الصفحة */
   const c = new Date(Date.now() + 2 * 3600e3);
@@ -223,7 +239,7 @@ async function fetchMovies(data) {
       const { tz, rows } = parseMoviesPage(html);
       for (const r of rows) {
         const t = zonedToUtc(r.y, r.mo, r.d, r.h, r.m, tz);
-        if (!seen.has(t)) { seen.add(t); list.push({ t, title: arabize(r.title) }); }   // برنامج واحد لكل لحظة بداية
+        if (!seen.has(t)) { seen.add(t); list.push({ t, end: t + r.dur * 60000, title: arabize(r.title) }); }   // برنامج واحد لكل لحظة بداية
       }
       console.log(`ART Movies ${d}: ${rows.length} برنامج (توقيت الصفحة ${tz})` + (rows.length ? '' : ' — الصفحة اتحملت بس مفيهاش برامج: ' + html.replace(/\s+/g, ' ').slice(0, 120)));
       if (rows.length) pagesOk++;
@@ -245,10 +261,16 @@ async function fetchMovies(data) {
     (byDay[key] = byDay[key] || []).push([dt.getUTCHours() * 60 + dt.getUTCMinutes(), p.title]);
   }
 
-  for (const k of Object.keys(data.days)) delete (data.days[k] || {})[MOVIES.id];   // مسح القديم
+  /* بنحدّث الفترة اللي اتسحبت بس (من أول برنامج لآخر برنامج)، وباقي المخزّن بيفضل زي ما هو */
+  const covStart = list[0].t, covEnd = list[list.length - 1].end;
   let written = 0;
   for (const [key, arr] of Object.entries(byDay)) {
-    (data.days[key] = data.days[key] || {})[MOVIES.id] = arr.sort((p, q) => p[0] - q[0]);
+    const [y, mo, d] = key.split('-').map(Number), ds = Date.UTC(y, mo - 1, d);
+    const prev = ((data.days[key] || {})[MOVIES.id]) || [];
+    const a = (covStart - ds) / 60000, b = (covEnd - ds) / 60000;
+    const merged = new Map(prev.filter(x => x[0] < a || x[0] >= b).map(x => [x[0], x]));
+    for (const x of arr) merged.set(x[0], x);
+    (data.days[key] = data.days[key] || {})[MOVIES.id] = [...merged.values()].sort((p, q) => p[0] - q[0]);
     written++;
   }
   if (unknownWords.size) console.warn('كلمات مش في القاموس:', [...unknownWords].join(', '));
@@ -311,7 +333,7 @@ async function run() {
   }
 
   // 2.5) ART Movies من مصدر تاني (لو فشل، باقي القنوات مش بتتأثر)
-  try { const n = await fetchMovies(data); if (n) { ok += n; withPrograms += n; } else fail++; }
+  try { const n = await fetchMovies(data); if (n === null) { /* متخطّي: المخزّن كفاية */ } else if (n) { ok += n; withPrograms += n; } else fail++; }
   catch (e) {
     fail++; console.warn('تعذّر ART Movies:', e.message, '(بنسيب بياناتها القديمة)');
     if (process.env.GITHUB_ACTIONS) console.log('::warning title=ART Movies EPG failed::' + e.message);   // يظهر باللون الأصفر في صفحة الـ Action
