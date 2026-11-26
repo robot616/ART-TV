@@ -1,13 +1,12 @@
 /*
-  fetch-epg.js  —  يسحب جدول قنوات ART من الموقع الرسمي (+ ART Movies من ontvtonight) ويحفظه في epg-data.js
+  fetch-epg.js  —  يسحب جدول قنوات ART من الموقع الرسمي (+ ART Movies من tvpassport.com) ويحفظه في epg-data.js
   التشغيل:  node fetch-epg.js        (يحتاج Node.js 18 أو أحدث، بدون أي مكتبات)
   حطه في نفس مجلد art-tv.html (أو اكتب مسار مجلد الصفحة بعد اسمه)، وشغّله مرة كل 24 ساعة (أو من التطبيق: require('./fetch-epg').run()).
   لو الموقع فشل أو غيّر شكله، البيانات القديمة في الملف بتفضل زي ما هي.
 
   متغيرات اختيارية:
-    ART_MOVIES_TZ   توقيت مواعيد ontvtonight. اسم منطقة (America/New_York) أو إزاحة ثابتة (UTC+7 أو +07:00). الافتراضي: UTC+7
-    ART_MOVIES_SHIFT_HOURS  إزاحة بالساعات على مواعيد ART Movies (الافتراضي 24 لأن الموقع بيكتب التاريخ متأخر يوم)
-    ART_MOVIES_URL  رابط صفحة القناة
+    ART_MOVIES_URL  رابط صفحة القناة على tvpassport (من غير التاريخ)
+    ART_MOVIES_TZ   توقيت مواعيد الصفحة لو الموقع مرجّعش اسم المنطقة المختارة (الافتراضي Africa/Cairo)
     ART_BASE        عنوان موقع ART الرسمي
     ART_EPG_DIR     مجلد الحفظ
 */
@@ -63,18 +62,14 @@ function parseDay(txt) {
   return items;
 }
 
-/* ============ مصدر تاني: ART Movies من ontvtonight.com ============ */
-/* مواعيد الموقع مش بتوقيت مصر. الافتراضي UTC+7 (اتحسب من مقارنة الموقع بالبث الفعلي).
-   لو البرنامج الشغال مش مطابق، غيّر ART_MOVIES_TZ بساعة زيادة أو أقل (UTC+6 / UTC+8) */
+/* ============ مصدر تاني: ART Movies من tvpassport.com ============ */
+/* الصفحة بتعرض المواعيد بالمنطقة الزمنية المختارة فيها (الصفحة المرفقة كانت Africa/Cairo).
+   السكربت بيقرا المنطقة المختارة من الصفحة نفسها ويحوّل المواعيد منها لـ GMT، فمفيش إزاحات يدوية. */
 const MOVIES = {
   id: 6,
-  url: process.env.ART_MOVIES_URL || 'https://www.ontvtonight.com/guide/listings/channel/69033482/art-movies.html',
-  tz:  process.env.ART_MOVIES_TZ  || 'UTC+7',
-  /* الموقع بيكتب تاريخ البرنامج متأخر يوم عن البث الفعلي (برنامج 22:30 مكتوب عليه 17 بيكون شغال فعلًا يوم 18).
-     الإزاحة بالساعات بتتضاف على كل المواعيد. لو لقيت البرنامج الشغال متقدم/متأخر غيّرها (0 = من غير إزاحة) */
-  shiftH: Number(process.env.ART_MOVIES_SHIFT_HOURS ?? 24)
+  url: (process.env.ART_MOVIES_URL || 'https://www.tvpassport.com/tv-listings/stations/art-movie-america/33199').replace(/\/+$/, ''),
+  tz:  process.env.ART_MOVIES_TZ || 'Africa/Cairo'
 };
-const SHIFT_MS = MOVIES.shiftH * 3600e3;
 
 function decodeHtml(t) {
   return t.replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16)))
@@ -167,20 +162,25 @@ function zonedToUtc(y, mo, d, h, mi, tz) {
   return t;
 }
 
-function parseMoviesPage(html, pageDate) {
-  const out = [];
-  for (const row of (html.match(/<tr[\s\S]*?<\/tr>/g) || [])) {
-    const t  = /<h5 class="thin ott-channel-time">\s*([^<]+?)\s*<\/h5>/.exec(row);
-    const ti = /<h5 class="thin ott-channel-show__title">\s*<a [^>]*>([\s\S]*?)<\/a>/.exec(row);
-    if (!t || !ti) continue;
-    const tm = /(\d{1,2}):(\d{2})\s*([ap]m)/i.exec(t[1]);
-    if (!tm) continue;
-    const h = (+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0);
-    const dn = /<i class="ott-channel-date-note">\s*(\d{4}-\d{2}-\d{2})/.exec(row);   // برنامج من اليوم اللي قبله
-    const title = decodeHtml(ti[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim().replace(/\s*\(\d{4}\)$/, '');
-    if (title) out.push({ date: dn ? dn[1] : pageDate, h, m: +tm[2], title });
+/* data-xxx="..." من عنصر البرنامج (الصفحة بتكتب كل بيانات البرنامج كـ attributes) */
+function dataAttrs(tag) {
+  const o = {}; const re = /data-([A-Za-z_]+)="([^"]*)"/g; let m;
+  while ((m = re.exec(tag))) o[m[1]] = decodeHtml(m[2]);
+  return o;
+}
+
+/* بيرجّع [{ local:'YYYY-MM-DD HH:MM', dur, title }] من صفحة يوم واحد + المنطقة الزمنية المختارة في الصفحة */
+function parseMoviesPage(html) {
+  const sel = /<select id="timezone_selector"[\s\S]*?<\/select>/.exec(html);
+  const tzm = sel && /<option value="([^"]+)"[^>]*\bselected\b/.exec(sel[0]);
+  const rows = [];
+  for (const tag of (html.match(/<div id="itemheader\d+"[^>]*>/g) || [])) {
+    const a = dataAttrs(tag);
+    const st = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(a.st || '');
+    const title = (a.episodeTitle || a.showName || '').replace(/\s+/g, ' ').trim();
+    if (st && title) rows.push({ y: +st[1], mo: +st[2], d: +st[3], h: +st[4], m: +st[5], dur: +a.duration || 30, title });
   }
-  return out;
+  return { tz: tzm ? tzm[1] : null, rows };
 }
 
 async function getText(url, headers) {
@@ -193,17 +193,11 @@ async function getText(url, headers) {
   return body;
 }
 
-/* هيدرز شبه المتصفح الحقيقي لموقع ontvtonight (بيرفض الطلبات اللي شكلها سكربت) */
 const MOVIES_HEADERS = {
   'User-Agent': UA,
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
-  'Cache-Control': 'no-cache',
-  'Upgrade-Insecure-Requests': '1',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-User': '?1'
+  'Cache-Control': 'no-cache'
 };
 
 /* وقت بتوقيت القاهرة للعرض في اللوج بس (للمقارنة بالبث الفعلي) */
@@ -212,24 +206,26 @@ const cairoFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', da
 async function fetchMovies(data) {
   const headers = MOVIES_HEADERS;
   const first = await withRetry(() => getText(MOVIES.url, headers));
-  const dates = []; const re = /<option value="(\d{4}-\d{2}-\d{2})"/g; let m;
-  while ((m = re.exec(first))) dates.push(m[1]);
+  const dates = []; const re = /\/(\d{4}-\d{2}-\d{2})"/g; let m;
+  while ((m = re.exec(first))) if (!dates.includes(m[1])) dates.push(m[1]);
   if (!dates.length) throw new Error('مش لاقي قايمة التواريخ في صفحة ART Movies. أول 150 حرف من الرد: ' + first.replace(/\s+/g, ' ').slice(0, 150));
+  dates.sort();
 
-  const rows = []; let pagesOk = 0;
+  const list = []; const seen = new Set(); let pagesOk = 0, pageTz = null;
   for (const d of dates) {
-    try { rows.push(...parseMoviesPage(await withRetry(() => getText(MOVIES.url + '?dt=' + d, headers)), d)); pagesOk++; }
-    catch (e) { console.warn(`تعذّر ART Movies ${d} → ${e.message}`); }
+    try {
+      const html = d === dates[0] && /\/(\d{4}-\d{2}-\d{2})/.test(MOVIES.url) ? first : await withRetry(() => getText(MOVIES.url + '/' + d, headers));
+      const { tz, rows } = parseMoviesPage(html);
+      const zone = tz || MOVIES.tz; pageTz = zone;
+      for (const r of rows) {
+        const t = zonedToUtc(r.y, r.mo, r.d, r.h, r.m, zone);
+        if (!seen.has(t)) { seen.add(t); list.push({ t, end: t + r.dur * 60000, title: arabize(r.title) }); }   // برنامج واحد لكل لحظة بداية
+      }
+      pagesOk++;
+    } catch (e) { console.warn(`تعذّر ART Movies ${d} → ${e.message}`); }
     await sleep(700);
   }
-  if (!rows.length) throw new Error('ART Movies: مفيش برامج اتسحبت');
-
-  const seen = new Set(), list = [];
-  for (const r of rows) {
-    const [y, mo, d] = r.date.split('-').map(Number);
-    const t = zonedToUtc(y, mo, d, r.h, r.m, MOVIES.tz) + SHIFT_MS;
-    if (!seen.has(t)) { seen.add(t); list.push({ t, title: arabize(r.title) }); }   // برنامج واحد لكل لحظة بداية
-  }
+  if (!list.length) throw new Error('ART Movies: مفيش برامج اتسحبت');
   list.sort((a, b) => a.t - b.t);
 
   /* للمقارنة: البرنامج الشغال دلوقتي حسب الموقع، بتوقيت القاهرة */
@@ -239,9 +235,8 @@ async function fetchMovies(data) {
   console.log('ART Movies (توقيت القاهرة) حوالين الوقت الحالي:');
   for (const p of list.slice(Math.max(0, ni - 1), ni + 2)) console.log('   ' + cairoFmt.format(new Date(p.t)) + '  ' + p.title);
 
-  /* التغطية: من أول يوم لآخر يوم في قايمة الموقع (بتوقيته) */
-  const [fy, fm, fd] = dates[0].split('-').map(Number), [ly, lm, ld] = dates[dates.length - 1].split('-').map(Number);
-  const covStart = zonedToUtc(fy, fm, fd, 0, 0, MOVIES.tz) + SHIFT_MS, covEnd = zonedToUtc(ly, lm, ld + 1, 0, 0, MOVIES.tz) + SHIFT_MS;
+  /* التغطية: من أول برنامج لنهاية آخر برنامج */
+  const covStart = list[0].t, covEnd = list[list.length - 1].end;
   const byDay = {};
   for (const p of list) {
     const dt = new Date(p.t), key = dt.toISOString().slice(0, 10);
@@ -252,16 +247,15 @@ async function fetchMovies(data) {
   let written = 0;
   for (const [key, arr] of Object.entries(byDay)) {
     const [y, mo, d] = key.split('-').map(Number), ds = Date.UTC(y, mo - 1, d);
-    if (ds + 86400000 <= covStart || ds >= covEnd) continue;           // خارج التغطية تمامًا
     const prev = ((data.days[key] || {})[MOVIES.id]) || [];
-    const a = (covStart - ds) / 60000, b = (covEnd - ds) / 60000;       // الدقايق المغطاة من اليوم ده
+    const a = Math.max(0, (covStart - ds) / 60000), b = Math.min(1440, (covEnd - ds) / 60000);   // الدقايق المغطاة من اليوم ده
     const merged = new Map(prev.filter(x => x[0] < a || x[0] >= b).map(x => [x[0], x]));
     for (const x of arr) merged.set(x[0], x);
     (data.days[key] = data.days[key] || {})[MOVIES.id] = [...merged.values()].sort((p, q) => p[0] - q[0]);
     written++;
   }
   if (unknownWords.size) console.warn('كلمات مش في القاموس (اتحوّلت تلقائيًا، راجعها وضيفها في AR_WORDS):', [...unknownWords].join(', '));
-  console.log(`ART Movies: ${rows.length} صف من ${pagesOk} صفحة، ${written} يوم اتحفظ (التوقيت ${MOVIES.tz}، إزاحة ${MOVIES.shiftH} ساعة)`);
+  console.log(`ART Movies: ${list.length} برنامج من ${pagesOk} صفحة، ${written} يوم اتحفظ (توقيت الصفحة ${pageTz})`);
   return written;
 }
 
